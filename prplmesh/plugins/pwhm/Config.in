@@ -50,6 +50,7 @@ config SAH_WLD_INIT_ORDER
 config SAH_WLD_ENABLE_USP_SERVER_SOCKET
     bool "Enable direct USP server socket"
     default n
+    depends on PACKAGE_mod-amxb-usp
 
 endmenu
 
