@@ -1,13 +1,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libswla
-PKG_VERSION:=v3.10.0
+PKG_VERSION:=v3.11.0
 SHORT_DESCRIPTION:=Shared Wifi Library using amx
 
-PKG_SOURCE:=libswla-v3.10.0.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/libraries/libswla/-/archive/v3.10.0
-PKG_HASH:=115d027cbde8e3e29269a49fd49450d83b6ecd13625296ea5c8bbf041a4208e3
-PKG_BUILD_DIR:=$(BUILD_DIR)/libswla-v3.10.0
+PKG_SOURCE:=libswla-v3.11.0.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/libraries/libswla/-/archive/v3.11.0
+PKG_HASH:=e86e1ac7ff1dbfd8ddc304f26f9efed858440bfaf93f95fc3abd36ce1cdc5351
+PKG_BUILD_DIR:=$(BUILD_DIR)/libswla-v3.11.0
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
@@ -19,7 +19,7 @@ PKG_BUILD_DEPENDS += doxygen/host
 include $(INCLUDE_DIR)/package.mk
 
 define Package/$(PKG_NAME)
-  CATEGORY:=SoftAtHome
+  CATEGORY:=prpl Foundation
   SUBMENU:=Libraries
   TITLE:=$(SHORT_DESCRIPTION)
   URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/libraries/libswla
