@@ -1,15 +1,16 @@
-From 9f24d14f2d658c9f214f3338540c9551fd013e02 Mon Sep 17 00:00:00 2001
-From: Marouan MCHARFI <marouan.mcharfi_ext@softathome.com>
-Date: Tue, 18 Jul 2023 16:35:04 +0200
+From aa896e98aa80abecd37a6becde00358a5589ce5c Mon Sep 17 00:00:00 2001
+From: Bhavesh Bharadiya <bnbharadiya@maxlinear.com>
+Date: Mon, 29 Jan 2024 12:23:57 +0530
 Subject: [PATCH] script: use macaddr_add to shift the wan_addr from br-lan mac
  addr
 
+Signed-off-by: Bhavesh Bharadiya <bnbharadiya@maxlinear.com>
 ---
  scripts/Plugin/wld_gen.sh | 4 +++-
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/scripts/Plugin/wld_gen.sh b/scripts/Plugin/wld_gen.sh
-index 87eeccf..b98594f 100644
+index f292c84..ba517e5 100644
 --- a/scripts/Plugin/wld_gen.sh
 +++ b/scripts/Plugin/wld_gen.sh
 @@ -1,4 +1,6 @@
@@ -18,8 +19,8 @@ index 87eeccf..b98594f 100644
 +
  [ -f /etc/environment ] && source /etc/environment
  ulimit -c ${ULIMIT_CONFIGURATION:-0}
- 
-@@ -26,7 +28,7 @@ get_base_wan_address()
+ name="wld"
+@@ -28,7 +30,7 @@ get_base_wan_address()
          fi
          [ -z "$WLAN_ADDR" ] || return
      fi
@@ -29,5 +30,5 @@ index 87eeccf..b98594f 100644
  
  kill_process()
 -- 
-2.25.1
+2.17.1
 
