@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Dmytro Puz <d.puz@inango-systems.com>
+Date: Wed, 24 Apr 2024 15:16:17 +0300
+Subject: [PATCH] controller: build problem with GCC 12.3.0.
+
+Remove redundant line.
+
+PPM-2829.
+
+Signed-off-by: Dmytro Puz <d.puz@inango-systems.com>
+---
+ controller/src/beerocks/master/controller.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/controller/src/beerocks/master/controller.cpp
++++ b/controller/src/beerocks/master/controller.cpp
+@@ -1556,7 +1556,7 @@ void Controller::set_esp(const std::stri
+     estimated_service_param.bytes[0] = est_service_info_field[0];
+     estimated_service_param.bytes[1] = est_service_info_field[1];
+     estimated_service_param.bytes[2] = est_service_info_field[2];
+-    (estimated_service_param.bytes[2]);
++
+     database.set_estimated_service_param(reporting_agent_bssid, param_name,
+                                          estimated_service_param.value);
+ }
