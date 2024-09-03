@@ -9,6 +9,9 @@ PKG_SOURCE:=prplMesh-$(PKG_REV).tar.gz
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_REV)
 PKG_HASH:=821b81828ddc91b90a3f9265d9459f91f57d06dac3084c6242b4e2ca6f8aaeab
 PKG_BUILD_DIR:=$(BUILD_DIR)/prplMesh-$(PKG_REV)
+PKG_MAINTAINER:=Frederik Van Bogaert <frederik.vanbogaert@prplfoundation.org>
+PKG_LICENSE:=BSD-2-Clause-Patent
+PKG_LICENSE_FILES:=LICENSE
 
 PKG_BUILD_PARALLEL:=1
 PKG_CONFIG_DEPENDS:= \
