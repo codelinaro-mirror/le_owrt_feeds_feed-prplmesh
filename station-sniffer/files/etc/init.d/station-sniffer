@@ -1,9 +1,70 @@
 #!/bin/sh /etc/rc.common
 
 USE_PROCD=1
+START=20
+
+CONFIGURATION=station-sniffer
+
+
+get_rad_dev() {
+
+    output=$(ba-cli -a 'WiFi.Radio.[OperatingFrequencyBand=="'"$freq"'GHz"].Name?' | sed -n '2p')
+
+    radio_number=$(echo "$output" | sed 's/^WiFi\.Radio\.\([0-9]\+\)\..*/\1/')
+    dev=$(echo "$output" | awk -F'"' '{print $2}')
+
+    # Check if the radio number is valid
+    if [ -z "$radio_number" ]; then
+        logger -t station-sniffer "No ${band}GHz radio found"
+        return 1
+    fi
+
+    # If the device name is not found, exit
+    if [ -z "$dev" ]; then
+        logger -t station-sniffer "No device found for WiFi.Radio.${radio_number}"
+        return 1
+    fi
+    return 0
+}
+
+setup_mon_if() {
+
+    get_rad_dev
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    # Subtract 1 from the radio number to bring to phy layer (instead of ambiorix)
+    radio_minus_one=$((radio_number - 1))
+
+    # Set the monitor interface name (you can modify the name if needed)
+    ifname="${mon_prefix}${radio_minus_one}"
+
+    iw dev "$dev" interface add "$ifname" type monitor 2>/dev/null
+    ip link set "$ifname" up
+
+    logger -t station-sniffer "Monitor interface $ifname created and set up"
+    return 0
+}
 
 start_service()
 {
+    config_load "${CONFIGURATION}"
+    local freq
+    local mon_prefix
+    local packet_wait_time
+
+    config_get freq default freq
+    config_get mon_prefix default mon_prefix
+    config_get packet_wait_time default packet_wait_time
+
+
+   setup_mon_if
+    if [ $? -ne 0 ]; then
+        logger -t station-sniffer "Failed to set up monitor interface, aborting."
+        exit 1
+    fi
+
     procd_open_instance
 
     procd_set_param stderr 1
@@ -12,6 +73,31 @@ start_service()
                     "${respawn_threshold:-3600}" \
                     "${respawn_timeout:-2}" \
                     "${respawn_retry:-0}"
-    procd_set_param command /usr/bin/station-sniffer-start
+
+    procd_set_param command /usr/bin/station-sniffer "$ifname" "$packet_wait_time"
+    procd_set_param file /etc/config/station-sniffer
+
     procd_close_instance
+}
+
+stop_service() {
+    config_load "${CONFIGURATION}"
+    local freq
+    local mon_prefix
+
+    config_get freq default freq
+    config_get mon_prefix default mon_prefix
+
+    get_rad_dev
+
+    ifname="${mon_prefix}$((radio_number - 1))"
+
+    logger -t station-sniffer "Deleting monitor interface ${ifname}"
+
+    iw dev "$ifname" del
+    if [ $? -ne 0 ]; then
+	logger -t station-sniffer "Failed to delete station-sniffer mon interface"
+    fi
+
+    killall station-sniffer
 }
