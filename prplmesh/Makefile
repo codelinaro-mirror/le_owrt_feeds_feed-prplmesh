@@ -59,6 +59,12 @@ define Package/prplmesh
 		+(TARGET_intel_x86&&PACKAGE_mod-whm-debug):iwlwav-hostap-ng-uci-debug \
 		+TARGET_intel_x86:libsafec3 \
 		+TARGET_intel_x86:bridge
+#	non-intel_x86 and non-intel_mips:
+	DEPENDS+= \
+		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-act-vlan \
+		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-core \
+		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-flower \
+		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-prio 
 #	non-intel_x86 neither non-intel_mips neither broadcom dependencies:
 	DEPENDS+= \
 		+!(TARGET_intel_x86||TARGET_intel_mips||TARGET_brcmbca||TARGET_ipq95xx):hostapd-openssl \
