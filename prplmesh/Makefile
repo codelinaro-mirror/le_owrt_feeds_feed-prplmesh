@@ -1,13 +1,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=prplmesh
-PKG_VERSION:=4.2.4
+PKG_VERSION:=4.2.6
 PKG_RELEASE:=1
 PKG_REV:=$(PKG_VERSION)
 
 PKG_SOURCE:=prplMesh-$(PKG_REV).tar.gz
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_REV)
-PKG_HASH:=52fb50f51dc533503b2bd65cd9c9d2a49feb06485f27c1eec401d2f528238453
+PKG_HASH:=821b81828ddc91b90a3f9265d9459f91f57d06dac3084c6242b4e2ca6f8aaeab
 PKG_BUILD_DIR:=$(BUILD_DIR)/prplMesh-$(PKG_REV)
 
 PKG_BUILD_PARALLEL:=1
