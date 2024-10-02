@@ -91,7 +91,8 @@ CMAKE_OPTIONS+= \
 	-DCMAKE_INSTALL_PREFIX=/opt/prplmesh \
 	-DPLATFORM_BUILD_DIR=$(BUILD_DIR) \
 	-DPLATFORM_STAGING_DIR=$(STAGING_DIR) \
-	-DPLATFORM_INCLUDE_DIR=$(STAGING_DIR)/usr/include
+	-DPLATFORM_INCLUDE_DIR=$(STAGING_DIR)/usr/include \
+	-DCMAKE_CXX_FLAGS="-Wno-error=deprecated-declarations"
 
 ifeq ($(wildcard $(PKG_BUILD_DIR)/.source_dir),)
 	CMAKE_OPTIONS += -DPRPLMESH_REVISION=$(PKG_REV)
