@@ -1,0 +1,4 @@
+config station-sniffer 'default'
+	option freq "5"
+	option mon_prefix "mon"
+	option packet_wait_time 500
