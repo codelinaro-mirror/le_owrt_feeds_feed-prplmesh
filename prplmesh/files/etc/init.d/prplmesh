@@ -164,8 +164,7 @@ stop() {
 }
 
 restart() {
-        stop_function
-        start_function
+        /opt/prplmesh/scripts/prplmesh_utils.sh restart
 }
 
 status() {
