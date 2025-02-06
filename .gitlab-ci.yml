@@ -1,0 +1,14 @@
+variables:
+  CI_DESIGNATED_BRANCH: master
+  CI_SDK_PIPELINE_SOURCE: parent_pipeline
+
+include:
+  - remote: https://gitlab.com/prpl-foundation/prplOS/prplos/-/raw/prplos/.gitlab/sdk.yml
+  - remote: https://gitlab.com/prpl-foundation/tooling/yml-templates/raw/main/.feed-pipeline.yml
+
+stages:
+  - check
+  - generate
+  - build
+  - integrate
+
