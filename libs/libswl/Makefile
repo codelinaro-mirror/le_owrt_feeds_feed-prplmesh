@@ -1,36 +1,40 @@
 include $(TOPDIR)/rules.mk
+-include $(STAGING_DIR)/components.config
 
-PKG_NAME:=libswlc
-PKG_VERSION:=v5.30.2
-SHORT_DESCRIPTION:=Shared Wifi Library
+PKG_NAME:=libswl
+PKG_VERSION:=v6.3.3
+SHORT_DESCRIPTION:=Shared Wifi Library using pcb
 
-PKG_SOURCE:=libswlc-v5.30.2.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/libraries/libswlc/-/archive/v5.30.2
-PKG_HASH:=e3761e0d6d99dc0a98ac1b93ebb6792b8f40819319d805338d2e14df3c7f4fd8
-PKG_BUILD_DIR:=$(BUILD_DIR)/libswlc-v5.30.2
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=v6.3.3
+PKG_SOURCE_URL:=https://$(SAH_GIT_USER):$(SAH_GIT_TOKEN)@$(SAH_GIT)/$(SAH_GIT_GROUP)/libswl.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
-PKG_LICENSE:=BSD-2-Clause-Patent
+PKG_LICENSE:=SAH
 PKG_LICENSE_FILES:=LICENSE
 
 
 PKG_RELEASE:=1
+PKG_BUILD_DEPENDS += PCB_OPEN_SSL_SUPPORT:openssl
 PKG_BUILD_DEPENDS += doxygen/host
-PKG_BUILD_DEPENDS += openssl/host
 
 include $(INCLUDE_DIR)/package.mk
 
 define Package/$(PKG_NAME)
-  CATEGORY:=prpl Foundation
+  CATEGORY:=SoftAtHome
   SUBMENU:=Libraries
   TITLE:=$(SHORT_DESCRIPTION)
-  URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/libraries/libswlc
+  URL:=https://$(SAH_GIT)/$(SAH_GIT_GROUP)/libswl
   DEPENDS += +libsahtrace
-  DEPENDS += +libopenssl
+  DEPENDS += +libpcb
+  DEPENDS += +libswlc
+  DEPENDS += +libpcb-jsonvp
   MENU:=1
 endef
 
 define Package/$(PKG_NAME)/description
-	Shared Wifi Library
+	Shared Wifi Library using pcb
 endef
 
 define Build/Compile
