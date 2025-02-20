@@ -18,8 +18,6 @@ PRPLMESH_REVISION:=$(PKG_SOURCE_VERSION)
 PKG_BUILD_PARALLEL:=1
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_WIRELESS_STA \
-	CONFIG_TARGET_intel_x86 \
-	CONFIG_TARGET_intel_mips \
 	CONFIG_TARGET_brcmbca \
 	CONFIG_USE_PRPLMESH_WHM \
 	CONFIG_PRPLMESH_ENABLE_UNIT_TESTS \
@@ -52,30 +50,16 @@ define Package/prplmesh
 		+ubus \
 		+ubox \
 		+ebtables
-#	intel_mips and intel_x86 specific dependencies:
+
 	DEPENDS+= \
-		+TARGET_intel_mips:dwpal_6x-uci \
-		+TARGET_intel_mips:iwlwav-hostap-uci \
-		+TARGET_intel_mips:libsafec3 \
-		+TARGET_intel_mips:bridge-ugw \
-		+(TARGET_intel_x86&&PACKAGE_mod-whm):dwpal_6x-uci-osp \
-		+(TARGET_intel_x86&&PACKAGE_mod-whm):iwlwav-hostap-ng-uci \
-		+(TARGET_intel_x86&&PACKAGE_mod-whm-debug):dwpal_6x-uci-osp-debug \
-		+(TARGET_intel_x86&&PACKAGE_mod-whm-debug):iwlwav-hostap-ng-uci-debug \
-		+TARGET_intel_x86:libsafec3 \
-		+TARGET_intel_x86:bridge
-#	non-intel_x86 and non-intel_mips:
+		+kmod-sched-act-vlan \
+		+kmod-sched-core \
+		+kmod-sched-flower \
+		+kmod-sched-prio
 	DEPENDS+= \
-		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-act-vlan \
-		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-core \
-		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-flower \
-		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-prio 
-#	non-intel_x86 neither non-intel_mips neither broadcom dependencies:
-	DEPENDS+= \
-		+!(TARGET_intel_x86||TARGET_intel_mips||TARGET_brcmbca||TARGET_ipq95xx):hostapd-openssl \
-		+!(TARGET_intel_x86||TARGET_intel_mips||TARGET_brcmbca||TARGET_ipq95xx):wpa-supplicant-openssl
-	DEPENDS+= \
-		+TARGET_ipq95xx:wpad-qca-mesh-openssl
+		+hostapd-openssl \
+		+wpa-supplicant-openssl
+
 	DEPENDS+= \
 		+PRPLMESH_ENABLE_AMBIORIX_UBUS_BACKEND:libamxb \
 		+PRPLMESH_ENABLE_AMBIORIX_UBUS_BACKEND:libamxrt \
@@ -126,24 +110,8 @@ ifeq ($(CONFIG_USE_PRPLMESH_WHM),y)
 endif
 endif
 
-ifeq ($(CONFIG_TARGET_intel_mips),y)
-	CMAKE_OPTIONS+= -DBWL_TYPE=DWPAL \
-		-DTARGET_PLATFORM_TYPE=ugw \
-		-DCMAKE_FIND_ROOT_PATH="${STAGING_DIR}/opt/intel;${CMAKE_FIND_ROOT_PATH}"
-else ifeq ($(CONFIG_TARGET_intel_x86),y)
-	CMAKE_OPTIONS+= -DBWL_TYPE=WHM \
-		-DTARGET_PLATFORM_TYPE=ugw \
-		-DCMAKE_FIND_ROOT_PATH="${STAGING_DIR}/opt/intel;${CMAKE_FIND_ROOT_PATH}"
-else ifeq ($(CONFIG_TARGET_ipq95xx),y)
-		CMAKE_OPTIONS+= -DTARGET_PLATFORM_TYPE=freedom
-else ifeq ($(CONFIG_TARGET_ipq807x),y)
-		CMAKE_OPTIONS+= -DTARGET_PLATFORM_TYPE=haze
-else ifeq ($(CONFIG_TARGET_mvebu),y)
-		CMAKE_OPTIONS+= -DTARGET_PLATFORM_TYPE=turris-omnia
-else
-	CMAKE_OPTIONS+= -DBWL_TYPE=NL80211 \
-		-DTARGET_PLATFORM_TYPE=turris-omnia
-endif
+CMAKE_OPTIONS+= -DBWL_TYPE=NL80211 \
+	-DTARGET_PLATFORM_TYPE=turris-omnia
 
 ifeq ($(CONFIG_PRPLMESH_ENABLE_UNIT_TESTS),y)
 	CMAKE_OPTIONS += -DBUILD_TESTS=ON
