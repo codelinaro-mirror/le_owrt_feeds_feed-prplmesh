@@ -164,7 +164,22 @@ stop() {
 }
 
 restart() {
-        /opt/prplmesh/scripts/prplmesh_utils.sh restart
+        if [ $(uci -q get prplmesh.config.enable) == "1" ]; then
+                wlan_ready_poll || {
+                        logger -t "${NAME}" -p daemon.warn "Timeout waiting for WLAN ready!"
+                        exit 1
+                }
+                if [ "$(uci get prplmesh.config.operating_mode)" = "Gateway" ]; then
+                        logger -t "${NAME}" -p daemon.info "Restart prplMesh controller & agent"
+                        /opt/prplmesh/scripts/prplmesh_utils.sh restart
+                else
+                        logger -t "${NAME}" -p daemon.info "Restart prplMesh agent"
+                        /opt/prplmesh/scripts/prplmesh_utils.sh restart -m A
+                fi
+        else
+                logger -t "${NAME}" -p daemon.warn "prplMesh is disabled (prplmesh.config.enable=0), skipping..."
+                exit 0
+        fi
 }
 
 status() {
