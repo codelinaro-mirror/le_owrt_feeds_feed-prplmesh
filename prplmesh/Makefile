@@ -1,14 +1,17 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=prplmesh
-PKG_VERSION:=4.3.0
-PKG_RELEASE:=2
-PKG_REV:=$(PKG_VERSION)
+PKG_RELEASE:=1
 
-PKG_SOURCE:=prplMesh-$(PKG_REV).tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_REV)
-PKG_HASH:=30436ff1e8288183254fcf86431056fc0c9900a2943262229aebf3e250a32174
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplMesh-$(PKG_REV)
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
+PKG_SOURCE_VERSION:=053cc9ab8a1ae4d38e6f77f9e0c509e8a39fcdda
+PKG_SOURCE_DATE:=2025-04-08
+PKG_MIRROR_HASH:=b66f16a0ba9cb8efaf3eb3c3aea3d3ee63bf6003cd8d534221f05943d2284b71
+
+PRPLMESH_VERSION:=$(subst -,.,$(PKG_SOURCE_DATE))
+PRPLMESH_REVISION:=$(PKG_SOURCE_VERSION)
+
 PKG_MAINTAINER:=Frederik Van Bogaert <frederik.vanbogaert@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
