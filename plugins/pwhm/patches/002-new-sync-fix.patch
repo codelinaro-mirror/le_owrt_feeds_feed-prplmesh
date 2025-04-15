@@ -1,0 +1,46 @@
+From 2b3682cfa9899d724b68285001433fb0902f5ce6 Mon Sep 17 00:00:00 2001
+From: sahbot <support.opensource@softathome.com>
+Date: Tue, 25 Feb 2025 11:11:41 +0100
+Subject: [PATCH] Issue SSW-9991 : Randomly: Hostapd crash seen after upgrade
+
+GitOrigin-RevId: 3fd7feaed27333ad34657928c31d932358485bc6
+---
+ include/wld/wld_fsm.h | 2 +-
+ src/wld_radio.c       | 8 ++++++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/include/wld/wld_fsm.h b/include/wld/wld_fsm.h
+index 2bebb8bb..d0b51ab6 100644
+--- a/include/wld/wld_fsm.h
++++ b/include/wld/wld_fsm.h
+@@ -62,7 +62,7 @@
+ #ifndef SRC_INCLUDE_WLD_WLD_FSM_H_
+ #define SRC_INCLUDE_WLD_WLD_FSM_H_
+ 
+-#define WLD_FSM_MAX_WAIT 10
++#define WLD_FSM_MAX_WAIT 15
+ #define WLD_FSM_WAIT_TIME 1000
+ 
+ #include "wld_types.h"
+diff --git a/src/wld_radio.c b/src/wld_radio.c
+index 673a667e..f5a53382 100644
+--- a/src/wld_radio.c
++++ b/src/wld_radio.c
+@@ -3383,6 +3383,14 @@ bool wld_rad_areAllVapsDone(T_Radio* pRad) {
+         if(!wld_vap_isDummyVap(pAP) && !pAP->initDone && !wld_ssid_isSSIDConfigured(pAP->pSSID)) {
+             return false;
+         }
++        /*
++         * vaps (new or initial) loaded from datamodel are not usable (available) while creation is not yet finalized:
++         * temporary alias (devName) but no netDevId
++         */
++        if(!swl_str_isEmpty(pAP->alias) && !pAP->index && !pAP->initDone) {
++            SAH_TRACEZ_WARNING(ME, "%s: vap creation is not yet finalized", pAP->alias);
++            return false;
++        }
+     }
+     return true;
+ }
+-- 
+GitLab
+
