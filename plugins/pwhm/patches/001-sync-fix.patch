@@ -1,0 +1,56 @@
+diff --git a/include/wld/wld.h b/include/wld/wld.h
+index 10ab64f..5d941f0 100644
+--- a/include/wld/wld.h
++++ b/include/wld/wld.h
+@@ -1707,6 +1707,7 @@ struct S_SSID {
+     wld_autoMacSrc_e autoMacSrc;              /* auto generated mac source: from radio (/or dummy) base mac, or statically learned from driver */
+     uint32_t autoMacRefIndex;                 /* mac address offset from source base mac */
+     char customNetDevName[IFNAMSIZ];          /* custom interface name set by dm conf */
++    bool initDone;                            /* Whether this SSID is properly initialized, and ready for configuration */
+ 
+     wld_mldLink_t* pMldLink;
+ };
+diff --git a/src/RadMgt/wld_rad_fsm.c b/src/RadMgt/wld_rad_fsm.c
+index 2f7d414..d850f2a 100644
+--- a/src/RadMgt/wld_rad_fsm.c
++++ b/src/RadMgt/wld_rad_fsm.c
+@@ -376,7 +376,9 @@ static void s_performSync(T_Radio* rad) {
+         rad->pFA->mfn_sync_ssid(pSSID->pBus, pSSID, GET);
+ 
+         // The first time we pass here when init is not done, we need to write back the AP and SSID
+-        if(!pAP->initDone) {
++        // Sync only when SSID context is finalized
++        SAH_TRACEZ_ERROR(ME, "%s: pAP->initDone=%d pSSID->initDone=%d", pAP->alias, pAP->initDone, pSSID->initDone);
++        if(!pAP->initDone && pSSID->initDone) {
+             pAP->initDone = true;
+             rad->pFA->mfn_sync_ap(pAP->pBus, pAP, SET);
+             rad->pFA->mfn_sync_ssid(pSSID->pBus, pSSID, SET);
+diff --git a/src/wld_accesspoint.c b/src/wld_accesspoint.c
+index 491515c..f7ff185 100644
+--- a/src/wld_accesspoint.c
++++ b/src/wld_accesspoint.c
+@@ -432,6 +432,8 @@ static bool s_finalizeApCreation(T_AccessPoint* pAP) {
+     wld_mld_registerLink(pSSID, pSSID->mldUnit);
+     s_sendChangeEvent(pAP, WLD_VAP_CHANGE_EVENT_CREATE_FINAL, NULL);
+ 
++    pSSID->initDone = true;
++
+     //delay sync AP and SSID Dm after all conf has been loaded
+     swla_delayExec_add((swla_delayExecFun_cbf) s_syncApSSIDDm, pAP);
+ 
+diff --git a/src/wld_ssid.c b/src/wld_ssid.c
+index cd6f6ad..ff74be6 100644
+--- a/src/wld_ssid.c
++++ b/src/wld_ssid.c
+@@ -884,6 +884,11 @@ static void s_setMacAddress_pwf(void* priv _UNUSED, amxd_object_t* object, amxd_
+     T_SSID* pSSID = wld_ssid_fromObj(object);
+     ASSERT_NOT_NULL(pSSID, , ME, "INVALID");
+     const char* pMacStr = amxc_var_constcast(cstring_t, newValue);
++
++    SAH_TRACEZ_ERROR(ME, "pMacStr=%s pSSID->MAC=%.2X:%.2X:%.2X:%.2X:%.2X:%.2X", (pMacStr ? pMacStr : "NULL"),
++                                pSSID->MACAddress[0], pSSID->MACAddress[1], pSSID->MACAddress[2],
++                                pSSID->MACAddress[3], pSSID->MACAddress[4], pSSID->MACAddress[5]);
++
+     swl_macBin_t mac = SWL_MAC_BIN_NEW();
+     if((SWL_MAC_CHAR_TO_BIN(&mac, pMacStr)) &&
+        (!SWL_MAC_BIN_MATCHES(pSSID->MACAddress, &mac))) {
