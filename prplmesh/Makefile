@@ -1,17 +1,19 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=prplmesh
-PKG_VERSION:=4.3.0
-PKG_RELEASE:=2
-PKG_REV:=$(PKG_VERSION)
+PKG_RELEASE:=1
 
-PKG_SOURCE:=prplMesh-$(PKG_REV).tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_REV)
-PKG_HASH:=30436ff1e8288183254fcf86431056fc0c9900a2943262229aebf3e250a32174
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplMesh-$(PKG_REV)
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=6ed3e348c0e707e03142300a97dc5c21280419e5
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
+PKG_MIRROR_HASH:=0c92e238b6a2a161004afeba777fceea83c9c9e2fc71711d6cfe1ecf33a6084f
+PKG_SOURCE_DATE:=2025-04-09
 PKG_MAINTAINER:=Frederik Van Bogaert <frederik.vanbogaert@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
+
+PRPLMESH_VERSION:=$(subst -,.,$(PKG_SOURCE_DATE))
+PRPLMESH_REVISION:=$(PKG_SOURCE_VERSION)
 
 PKG_BUILD_PARALLEL:=1
 PKG_CONFIG_DEPENDS:= \
@@ -104,8 +106,8 @@ CMAKE_OPTIONS+= \
 	-DCMAKE_CXX_FLAGS="-Wno-error=deprecated-declarations"
 
 ifeq ($(wildcard $(PKG_BUILD_DIR)/.source_dir),)
-	CMAKE_OPTIONS += -DPRPLMESH_REVISION=$(PKG_REV)
-	CMAKE_OPTIONS += -DPRPLMESH_VERSION=$(PKG_VERSION)
+	CMAKE_OPTIONS += -DPRPLMESH_REVISION=$(PRPLMESH_REVISION)
+	CMAKE_OPTIONS += -DPRPLMESH_VERSION=$(PRPLMESH_VERSION)
 endif
 
 CMAKE_OPTIONS+=-DPython3_EXECUTABLE=$(STAGING_DIR_HOST)/bin/python3
@@ -113,11 +115,11 @@ $(eval $(call TestHostCommand,python3-yaml, \
 	Please install the Python3 YAML module, \
 	$(STAGING_DIR_HOST)/bin/python3 -c 'import yaml'))
 
-CONTROLLER_ROOT_DM:=$(CONFIG_PRPL_CONTROLLER_ROOT_PATH)
+DATAELEMENTS_ROOT_DM:=$(CONFIG_PRPL_CONTROLLER_ROOT_PATH)
 
 ifeq ($(CONFIG_PRPLMESH_ENABLE_AMBIORIX_UBUS_BACKEND),y)
 	CMAKE_OPTIONS += -DENABLE_NBAPI=ON
-	CMAKE_OPTIONS += -DCONTROLLER_ROOT_DM="$(CONTROLLER_ROOT_DM)"
+	CMAKE_OPTIONS += -DDATAELEMENTS_ROOT_DM="$(DATAELEMENTS_ROOT_DM)"
 	CMAKE_OPTIONS += -DUBUS_SOCK="-DAMBIORIX_BACKEND_PATH=\\\"/usr/bin/mods/amxb/mod-amxb-ubus.so\\\" -DAMBIORIX_BUS_URI=\\\"ubus:/var/run/ubus/ubus.sock\\\""
 ifeq ($(CONFIG_USE_PRPLMESH_WHM),y)
 	CMAKE_OPTIONS += -DUSE_PRPLMESH_WHM=ON
@@ -133,6 +135,12 @@ else ifeq ($(CONFIG_TARGET_intel_x86),y)
 	CMAKE_OPTIONS+= -DBWL_TYPE=WHM \
 		-DTARGET_PLATFORM_TYPE=ugw \
 		-DCMAKE_FIND_ROOT_PATH="${STAGING_DIR}/opt/intel;${CMAKE_FIND_ROOT_PATH}"
+else ifeq ($(CONFIG_TARGET_ipq95xx),y)
+		CMAKE_OPTIONS+= -DTARGET_PLATFORM_TYPE=freedom
+else ifeq ($(CONFIG_TARGET_ipq807x),y)
+		CMAKE_OPTIONS+= -DTARGET_PLATFORM_TYPE=haze
+else ifeq ($(CONFIG_TARGET_mvebu),y)
+		CMAKE_OPTIONS+= -DTARGET_PLATFORM_TYPE=turris-omnia
 else
 	CMAKE_OPTIONS+= -DBWL_TYPE=NL80211 \
 		-DTARGET_PLATFORM_TYPE=turris-omnia
@@ -157,7 +165,6 @@ define Package/prplmesh/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(INSTALL_BIN) ./files/etc/init.d/* $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/etc/uci-defaults/* $(1)/etc/uci-defaults/
-	$(SED) '/CONFIG_CONTROLLER_ROOT_DM=/ c\CONFIG_CONTROLLER_ROOT_DM=$(CONTROLLER_ROOT_DM)' $(1)/etc/init.d/prplmesh
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/bin $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/scripts $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/lib/*.so* $(1)/usr/lib/
