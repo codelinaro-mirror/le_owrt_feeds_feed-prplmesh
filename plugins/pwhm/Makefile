@@ -1,13 +1,16 @@
+# WARNING: Automatically generated file using BAF (Build system Agnostic File) tooling
+# WARNING: You should contribute changes to https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/blob/main/baf.yml instead
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.6.7
-SHORT_DESCRIPTION:=PrplMesh WHM
+PKG_VERSION:=dev_PPW-524
+SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/$(PKG_VERSION)
-PKG_HASH:=09db5e71c5e72fe075b84719b6369aaa8d8160ce938be7bca94153fee2c9a083
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-$(PKG_VERSION)
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=dev_PPW-524
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
@@ -15,7 +18,6 @@ PKG_LICENSE_FILES:=LICENSE
 COMPONENT:=pwhm
 
 PKG_RELEASE:=1
-PKG_BUILD_DEPENDS += openssl/host
 
 define SAHInit/Install
 	install -d ${PKG_INSTALL_DIR}/etc/rc.d/
@@ -50,7 +52,7 @@ define Package/$(PKG_NAME)
 endef
 
 define Package/$(PKG_NAME)/description
-	PrplMesh WHM
+	prplMesh WHM
 endef
 
 define Build/Compile
