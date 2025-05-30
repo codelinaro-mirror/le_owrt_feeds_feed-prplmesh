@@ -1,0 +1,41 @@
+From a9d43f0af0e5107c4d81efa7c150adf70f46bed4 Mon Sep 17 00:00:00 2001
+From: Maarten De Decker <maarten.dedecker@mind.be>
+Date: Fri, 23 May 2025 11:14:56 +0200
+Subject: [PATCH] Change prplMesh ACL and add proxypath configuration
+
+Signed-off-by: Maarten De Decker <maarten.dedecker@mind.be>
+---
+ acl/admin/prplmesh.json.in                                  | 5 ++---
+ controller/nbapi/odl/01_device-wifi_prplmesh_mapping.odl.in | 3 +++
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+ create mode 100644 controller/nbapi/odl/01_device-wifi_prplmesh_mapping.odl.in
+
+diff --git a/acl/admin/prplmesh.json.in b/acl/admin/prplmesh.json.in
+index e48e728cd..ab062d9a7 100644
+--- a/acl/admin/prplmesh.json.in
++++ b/acl/admin/prplmesh.json.in
+@@ -1,10 +1,9 @@
+ {
+-    "@CONTROLLER_ROOT_DM@.": {
++    "Device.WiFi.DataElements.": {
+         "Order": 1,
+         "Param": "rwxn",
+         "Obj": "rwxn",
+         "InstantiatedObj": "rwxn",
+         "CommandEvent": "rwxn"
+     }
+-} 
+-
++}
+diff --git a/controller/nbapi/odl/01_device-wifi_prplmesh_mapping.odl.in b/controller/nbapi/odl/01_device-wifi_prplmesh_mapping.odl.in
+new file mode 100644
+index 000000000..1a702ebe6
+--- /dev/null
++++ b/controller/nbapi/odl/01_device-wifi_prplmesh_mapping.odl.in
+@@ -0,0 +1,3 @@
++%config {
++    %global "proxy-object.'Device.WiFi.DataElements.'" = "@DATAELEMENTS_ROOT_DM@.";
++}
+-- 
+2.48.1
+
