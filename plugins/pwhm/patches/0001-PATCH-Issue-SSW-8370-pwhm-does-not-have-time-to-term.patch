@@ -1,0 +1,47 @@
+From 21e0c89bebaec7ab25942e9d81af1ffc38d2b6fa Mon Sep 17 00:00:00 2001
+From: sahbot <support.opensource@softathome.com>
+Date: Fri, 6 Jun 2025 10:07:44 +0200
+Subject: [PATCH] [PATCH] Issue: SSW-8370 - pwhm does not have time to
+ terminate
+
+Problem: Init script kills pwhm with SIGKILL.
+
+Cause: Timeout of 5 seconds after SIGTERM is too short.
+
+Solution: Increase timeout to 15 seconds. Make sure to align stop and shutdown
+timeouts.
+GitOrigin-RevId: 9ca3c622331f7ab1405e7aca4b3d6e6b76035fd9
+
+Cherry-picked from: e8c439bdfa10b713dff378bd992cf5d327e17a47
+---
+ scripts/Plugin/wld_gen.sh | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/Plugin/wld_gen.sh b/scripts/Plugin/wld_gen.sh
+index 257a819..1ae9397 100644
+--- a/scripts/Plugin/wld_gen.sh
++++ b/scripts/Plugin/wld_gen.sh
+@@ -10,6 +10,7 @@ fi
+ ulimit -c ${ULIMIT_CONFIGURATION:-0}
+ name="wld"
+ datamodel_root="WiFi"
++pwhm_term_timeout=15
+ 
+ prevent_netifd_to_configure_wireless()
+ {
+@@ -69,10 +70,10 @@ case $1 in
+         process_start ${name} -D
+         ;;
+     stop)
+-        process_stop ${name}
++        process_stop ${name} ${pwhm_term_timeout}
+         ;;
+     shutdown)
+-        process_shutdown ${name}
++        process_shutdown ${name} ${pwhm_term_timeout}
+         ;;
+     restart)
+         $0 stop
+-- 
+2.48.1
+
