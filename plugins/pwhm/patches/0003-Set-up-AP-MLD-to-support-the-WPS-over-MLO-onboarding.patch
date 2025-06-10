@@ -1,0 +1,47 @@
+From 06866d0777b9f953be46ca154da1d92001135ba4 Mon Sep 17 00:00:00 2001
+From: Zhijian <vip.zhijian@gmail.com>
+Date: Tue, 10 Jun 2025 12:12:19 +0800
+Subject: [PATCH] [PATCH] wps: Set up AP MLD to support the WPS over MLO
+ onboarding.
+
+(Provided by MTK)
+---
+ src/nl80211/wld_hostapd_cfgFile.c | 2 ++
+ src/nl80211/wld_wpaSupp_cfgFile.c | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/src/nl80211/wld_hostapd_cfgFile.c b/src/nl80211/wld_hostapd_cfgFile.c
+index 31f93db..086105b 100644
+--- a/src/nl80211/wld_hostapd_cfgFile.c
++++ b/src/nl80211/wld_hostapd_cfgFile.c
+@@ -872,6 +872,7 @@ static bool s_setVapCommonConfig(T_AccessPoint* pAP, swl_mapChar_t* vapConfigMap
+         swl_mapCharFmt_addValInt32(vapConfigMap, "wpa_group_rekey", pAP->rekeyingInterval);
+         swl_mapChar_add(vapConfigMap, "wpa_ptk_rekey", "0");
+         swl_mapChar_add(vapConfigMap, wpa_key_str, pAP->keyPassPhrase);
++        swl_mapChar_add(vapConfigMap, "wps_cred_add_sae", "1");
+         // If sae_password is set, hostapd will use the sae_password value
+         // for WPA3 connection and wpa_passphrase for WPA-WPA2. If sae_password
+         // is not set, wpa_passphrase will be used for WPA3 connection
+@@ -910,6 +911,7 @@ static bool s_setVapCommonConfig(T_AccessPoint* pAP, swl_mapChar_t* vapConfigMap
+         swl_mapChar_add(vapConfigMap, "sae_groups", "19 20 21");
+         swl_mapChar_add(vapConfigMap, "ieee80211w", "2");
+         swl_mapCharFmt_addValInt32(vapConfigMap, "sae_pwe", isH2E ? is6g ? 1 : 2 : 0);
++        swl_mapChar_add(vapConfigMap, "wps_cred_add_sae", "1");
+         if(wld_rad_checkEnabledRadStd(pRad, SWL_RADSTD_BE)) {
+             swl_mapChar_add(vapConfigMap, "beacon_prot", "1");
+         }
+diff --git a/src/nl80211/wld_wpaSupp_cfgFile.c b/src/nl80211/wld_wpaSupp_cfgFile.c
+index dac3b3f..05719f4 100644
+--- a/src/nl80211/wld_wpaSupp_cfgFile.c
++++ b/src/nl80211/wld_wpaSupp_cfgFile.c
+@@ -111,6 +111,7 @@ static swl_rc_ne s_setWpaSuppGlobalConfig(T_EndPoint* pEP, wld_wpaSupp_config_t*
+      * to process received credentials internally and pass them over ctrl_iface
+      * to external program */
+     swl_mapChar_add(global, "wps_cred_processing", "2");
++    swl_mapChar_add(global, "wps_cred_add_sae", "1");
+ 
+     T_EndPointProfile* epProfile = pEP->currentProfile;
+     if((epProfile != NULL) &&
+-- 
+2.49.0
+
