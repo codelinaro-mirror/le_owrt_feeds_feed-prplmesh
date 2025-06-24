@@ -47,6 +47,8 @@ define Package/$(PKG_NAME)
   DEPENDS += +libamxj
   DEPENDS += +mod-netmodel
   DEPENDS += +odl-generator
+  DEPENDS += +TARGET_intel_x86&&PACKAGE_mod-whm-debug:kmod-iwlwav-driver-uci-debug
+  DEPENDS += +TARGET_intel_x86&&PACKAGE_mod-whm:kmod-iwlwav-driver-uci
   MENU:=1
 endef
 
