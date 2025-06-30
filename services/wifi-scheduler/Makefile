@@ -1,13 +1,15 @@
+# WARNING: Automatically generated file using BAF (Build system Agnostic File) tooling
+# WARNING: You should contribute changes to https://gitlab.com/prpl-foundation/prplmesh/wifi-scheduler/-/blob/main/baf.yml instead
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=wifi-scheduler
-PKG_VERSION:=v0.5.6
+PKG_VERSION:=v0.6.0
 SHORT_DESCRIPTION:=WiFi Scheduler
 
-PKG_SOURCE:=wifi-scheduler-v0.5.6.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/wifi-scheduler/-/archive/v0.5.6
-PKG_HASH:=66bb5cb8f065408dd73c4d35a6d386734ea1d373f07f3708fbae39a15c135e4e
-PKG_BUILD_DIR:=$(BUILD_DIR)/wifi-scheduler-v0.5.6
+PKG_SOURCE:=wifi-scheduler-v0.6.0.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/wifi-scheduler/-/archive/v0.6.0
+PKG_HASH:=7f62f47e14635a54631c5bfb6a647b72b1c557583cd4e4544c87e00dfa15a335
+PKG_BUILD_DIR:=$(BUILD_DIR)/wifi-scheduler-v0.6.0
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
@@ -26,7 +28,7 @@ include $(INCLUDE_DIR)/package.mk
 
 define Package/$(PKG_NAME)
   CATEGORY:=prpl Foundation
-  SUBMENU:=Applications
+  SUBMENU:=prplMesh
   TITLE:=$(SHORT_DESCRIPTION)
   URL:=https://gitlab.com/prpl-foundation/prplmesh/wifi-scheduler
   DEPENDS += +libsahtrace
