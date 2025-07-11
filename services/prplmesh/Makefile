@@ -75,8 +75,7 @@ define Package/prplmesh
 		+!(TARGET_intel_x86||TARGET_intel_mips||TARGET_brcmbca||TARGET_ipq95xx):hostapd-openssl \
 		+!(TARGET_intel_x86||TARGET_intel_mips||TARGET_brcmbca||TARGET_ipq95xx):wpa-supplicant-openssl
 	DEPENDS+= \
-		+TARGET_ipq95xx:hostapd-qca-openssl \
-		+TARGET_ipq95xx:wpa-supplicant-qca-openssl
+		+TARGET_ipq95xx:wpad-qca-mesh-openssl
 	DEPENDS+= \
 		+PRPLMESH_ENABLE_AMBIORIX_UBUS_BACKEND:libamxb \
 		+PRPLMESH_ENABLE_AMBIORIX_UBUS_BACKEND:libamxrt \
