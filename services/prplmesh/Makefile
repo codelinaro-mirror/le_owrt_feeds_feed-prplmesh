@@ -5,10 +5,11 @@ PKG_VERSION=5.0.0
 PKG_RELEASE:=5
 PKG_REV:=$(PKG_VERSION)
 
-PKG_SOURCE:=prplMesh-$(PKG_REV).tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_REV)
-PKG_HASH:=dd41b1e9c3009e301010ea9ea8819df8a7604b0667a2747be060db51f814314e
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplMesh-$(PKG_REV)
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=1ae680978a6c5f8a7636d4e9d96017bca54f5461
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
+PKG_MIRROR_HASH:=139e465ce7902e5b39514c255db5ad65e1b76d7657deeaba00d3c5d2ee9b965a
+PKG_SOURCE_DATE:=2025-07-18
 PKG_MAINTAINER:=Frederik Van Bogaert <frederik.vanbogaert@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
