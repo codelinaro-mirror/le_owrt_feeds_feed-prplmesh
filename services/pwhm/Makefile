@@ -3,13 +3,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.6.19
+PKG_VERSION:=v7.6.20
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.6.19.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.6.19
-PKG_HASH:=e8ccb2778bc414d9fd498e1c74d58d7dbc7dca6fe8cdf6f102d5ace5937d202b
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.6.19
+PKG_SOURCE:=pwhm-v7.6.20.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.6.20
+PKG_HASH:=13058a5fd2342d3c2302b192d8d39692f2e02489c42a72f0eb530e7dcf17a632
+PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.6.20
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
@@ -47,6 +47,8 @@ define Package/$(PKG_NAME)
   DEPENDS += +libamxj
   DEPENDS += +mod-netmodel
   DEPENDS += +odl-generator
+  DEPENDS += +TARGET_intel_x86&&PACKAGE_mod-whm-debug:kmod-iwlwav-driver-uci-debug
+  DEPENDS += +TARGET_intel_x86&&PACKAGE_mod-whm:kmod-iwlwav-driver-uci
   MENU:=1
 endef
 
