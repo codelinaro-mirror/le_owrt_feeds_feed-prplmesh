@@ -208,6 +208,8 @@ gateway_mode() {
 }
 
 __uci_set_certification_mode__() {
+        logger -t "${NAME}" -p daemon.info "Disable amx-processmonitor in certification mode"
+        sh /etc/init.d/amx-processmonitor stop || true
         uci set prplmesh.config.certification_mode=1
         uci commit prplmesh
 }
