@@ -1,0 +1,30 @@
+From 5f2cf5ca1920d6a0484f780b18b8cf1cba5ae150 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20=C5=A0tetiar?= <petr.stetiar@prplfoundation.org>
+Date: Thu, 4 Sep 2025 05:03:16 +0000
+Subject: [PATCH] WIP: wld_wpaCtrlInterface: disable wpa debug level increase
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Petr Štetiar <petr.stetiar@prplfoundation.org>
+---
+ src/nl80211/wld_wpaCtrlInterface.c | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/src/nl80211/wld_wpaCtrlInterface.c b/src/nl80211/wld_wpaCtrlInterface.c
+index bd69c639472a..439bda3f514c 100644
+--- a/src/nl80211/wld_wpaCtrlInterface.c
++++ b/src/nl80211/wld_wpaCtrlInterface.c
+@@ -411,12 +411,6 @@ bool wld_wpaCtrlInterface_open(wld_wpaCtrlInterface_t* pIface) {
+         return false;
+     }
+ 
+-    char level_cmd[16];
+-    snprintf(level_cmd, sizeof(level_cmd), "LEVEL %d", WPA_MSG_LEVEL_DEBUG_ID);
+-    if((!swl_rc_isOk(wld_wpaCtrlConnection_sendCmdCheckResponse(pIface->eventConn, level_cmd, "OK")))) {
+-        SAH_TRACEZ_WARNING(ME, "%s: fail to set debug level", pIface->name);
+-    }
+-
+     /*
+      * create a socket for cmd
+      */
