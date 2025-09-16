@@ -17,6 +17,7 @@ PKG_LICENSE_FILES:=LICENSE
 COMPONENT:=pwhm
 
 PKG_RELEASE:=1
+PKG_BUILD_DEPENDS += PACKAGE_kmod-mac80211:mac80211
 
 define SAHInit/Install
 	install -d ${PKG_INSTALL_DIR}/etc/rc.d/
