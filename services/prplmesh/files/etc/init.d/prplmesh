@@ -104,12 +104,12 @@ start_function() {
                         logger -t "${NAME}" -p daemon.warn "Timeout waiting for WLAN ready!"
                         exit 1
                 }
-                if [ "$(uci get prplmesh.config.operating_mode)" = "Gateway" ]; then
-                        logger -t "${NAME}" -p daemon.info "Start prplMesh controller & agent"
-                        /opt/prplmesh/scripts/prplmesh_utils.sh start
-                else
+                if [ "$(uci get prplmesh.config.management_mode)" = "Multi-AP-Agent" ]; then
                         logger -t "${NAME}" -p daemon.info "Start prplMesh agent"
                         /opt/prplmesh/scripts/prplmesh_utils.sh start -m A
+                else
+                        logger -t "${NAME}" -p daemon.info "Start prplMesh agent & controller"
+                        /opt/prplmesh/scripts/prplmesh_utils.sh start -m CA
                 fi
         else
                 logger -t "${NAME}" -p daemon.warn "prplMesh is disabled (prplmesh.config.enable=0), skipping..."
