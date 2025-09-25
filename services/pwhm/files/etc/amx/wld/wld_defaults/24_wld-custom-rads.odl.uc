@@ -5,6 +5,7 @@
 {% if (Radio.OperatingFrequency == "2.4GHz") : %}
             object '{{Radio.Alias}}' {
                 parameter 'RegulatoryDomain' = "US";
+                parameter ForceMRSNOSupport = true;
                 object ChannelMgt {
                     parameter AcsBootChannel = 1;
                 }
@@ -12,6 +13,7 @@
 {% elif (Radio.OperatingFrequency == "5GHz") : %}
             object '{{Radio.Alias}}' {
                 parameter 'RegulatoryDomain' = "US";
+                parameter ForceMRSNOSupport = true;
                 object ChannelMgt {
                     parameter AcsBootChannel = 36;
                 }
@@ -19,6 +21,7 @@
 {% elif (Radio.OperatingFrequency == "6GHz") : %}
             object '{{Radio.Alias}}' {
                 parameter 'RegulatoryDomain' = "US";
+                parameter ForceMRSNOSupport = true;
                 object ChannelMgt {
                     parameter AcsBootChannel = 37;
                 }
