@@ -3,13 +3,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.15.5
+PKG_VERSION:=feature_PPM-3522-custom-arguments-for-daemons
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.15.5.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.15.5
-PKG_HASH:=fa5aee37879e4bb5a09655fa69163ee1f91daec51e69de91edf25d24afb06f2c
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.15.5
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=feature_PPM-3522-custom-arguments-for-daemons
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
