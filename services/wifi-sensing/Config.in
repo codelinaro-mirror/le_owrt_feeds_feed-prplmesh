@@ -1,0 +1,28 @@
+config PACKAGE_wifi-sensing
+    tristate
+    select SAH_SERVICES_SENSING
+
+if PACKAGE_wifi-sensing
+
+menu "Select wifi-sensing build options"
+    depends on PACKAGE_wifi-sensing
+
+config SAH_SERVICES_SENSING
+    bool "Build wifi sensing itself"
+    default y
+
+config SAH_SERVICES_SENSING_START_ORDER
+    int "Start up order"
+    default 120
+
+config SAH_SERVICES_SENSING_STOP_ORDER
+    int "Stop order"
+    default 1
+
+config SAH_SERVICES_SENSING_PROCD_SUPPORT
+    bool "Installs procd init script in stead of the default init script"
+    default PACKAGE_procd
+
+endmenu
+
+endif
