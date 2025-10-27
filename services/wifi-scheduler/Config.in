@@ -1,0 +1,28 @@
+config PACKAGE_wifi-scheduler
+    tristate
+    select SAH_SERVICES_WIFI-SCHEDULER
+
+if PACKAGE_wifi-scheduler
+
+menu "Select wifi-scheduler build options"
+    depends on PACKAGE_wifi-scheduler
+
+config SAH_SERVICES_WIFI-SCHEDULER
+    bool "Service for Week-based WiFi enabling"
+    default y
+
+config SAH_SERVICES_WIFI-SCHEDULER_START_ORDER
+    int "Start up order"
+    default 99
+
+config SAH_SERVICES_WIFI-SCHEDULER_STOP_ORDER
+    int "Stop order"
+    default 1
+
+config SAH_SERVICES_WIFI-SCHEDULER_PROCD_SUPPORT
+    bool "Installs procd init script in stead of the default init script"
+    default PACKAGE_procd
+
+endmenu
+
+endif
