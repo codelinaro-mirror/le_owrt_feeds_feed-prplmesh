@@ -1,0 +1,9 @@
+
+# Due to bug PCF-2203 BAF generate broken OpenWRT Makefiles
+# As recommended by SaH in comment to PCF-1774 such cases should be solved with Makefile.append
+define SAHInit/Install
+	install -d $(1)/etc/rc.d/
+	if [[ "${CONFIG_PACKAGE_procd}" != "y" && "${CONFIG_SAH_WLD_PROCESS_MANAGER}" != "y" ]]; then \
+	ln -sfr $(1)/etc/init.d/$(CONFIG_SAH_WLD_INIT_SCRIPT) $(1)/etc/rc.d/S$(CONFIG_SAH_WLD_INIT_ORDER)$(CONFIG_SAH_WLD_INIT_SCRIPT); \
+	fi
+endef

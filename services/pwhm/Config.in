@@ -71,9 +71,10 @@ config SAH_WLD_ROOT_OBJ_PREFIX
     default "Device."
     depends on SAH_WLD_ENABLE_USP_SERVER_SOCKET
 
-config SAH_SERVICES_PWHM_PROCD_SUPPORT
-    bool "Installs procd init script in stead of the default init script"
-    default PACKAGE_procd
+config SAH_WLD_PROCESS_MANAGER
+    bool "Disable autostart in PWHM when Process Manager enabled"
+    default y
+    depends on PACKAGE_prplmesh-process-manager
 
 endmenu
 
