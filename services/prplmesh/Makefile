@@ -2,13 +2,14 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=prplmesh
 PKG_RELEASE:=1
+PKG_VERSION:=PPM-3649-connect-to-dm-mapper
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=4ddd9df30799a2b7509ce5452ca22cccf5d391fe
+PKG_SOURCE_VERSION:=feature/PPM-3649-connect-to-dm-mapper
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
-PKG_MIRROR_HASH:=6f2c7d291b691539da392e50507153173cdf762c26dfe2d124cac43732538fb2
-PKG_SOURCE_DATE:=2025-11-24
-PKG_MAINTAINER:=Cihangir Odabas <cihangir.odabas@prplfoundation.org>
+PKG_MIRROR_HASH:=skip
+PKG_SOURCE_DATE:=2025-10-28
+PKG_MAINTAINER:=Frederik Van Bogaert <frederik.vanbogaert@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
 
@@ -163,8 +164,10 @@ define Package/prplmesh/install
 	$(INSTALL_DIR) $(1)/opt/prplmesh
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(INSTALL_DIR) $(1)/etc/acl/admin
-	$(INSTALL_DIR) $(1)/etc/amx/tr181-device/extensions
 	$(INSTALL_BIN) ./files/etc/init.d/* $(1)/etc/init.d/
+ifeq ($(CONFIG_PACKAGE_prplmesh-process-manager),y)
+	echo 'enable() { return 0; }' >>$(1)/etc/init.d/prplmesh
+endif
 	$(INSTALL_BIN) ./files/etc/uci-defaults/* $(1)/etc/uci-defaults/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/bin $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/scripts $(1)/opt/prplmesh/
@@ -172,7 +175,6 @@ define Package/prplmesh/install
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/share $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/etc/acl/admin/prplmesh.json $(1)/etc/acl/admin/
-	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config/controller/odl/01_device-wifi_prplmesh_mapping.odl $(1)/etc/amx/tr181-device/extensions/
 endef
 
 define Package/prplmesh-unit-tests/install
