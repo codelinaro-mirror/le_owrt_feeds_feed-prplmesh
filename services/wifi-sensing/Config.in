@@ -19,6 +19,16 @@ config SAH_SERVICES_SENSING_STOP_ORDER
     int "Stop order"
     default 1
 
+config SAH_SERVICES_SENSING_PROCESS_MANAGER
+    bool "Disable autostart in WiFi-Sensing when Process Manager enabled"
+    default y
+    depends on PACKAGE_prplmesh-process-manager
+
+config SAH_SERVICES_SENSING_AMX_PROCESSMONITOR
+    bool "Install AMX ProcessMonitor files when component enabled"
+    default y
+    depends on (SAH_AMX_PROCESSMONITOR || PACKAGE_amx-processmonitor)
+
 endmenu
 
 endif
