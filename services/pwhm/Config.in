@@ -71,10 +71,6 @@ config SAH_WLD_ROOT_OBJ_PREFIX
     default "Device."
     depends on SAH_WLD_ENABLE_USP_SERVER_SOCKET
 
-config PACKAGE_procd
-    bool ""
-    default n
-
 endmenu
 
 endif
