@@ -1,0 +1,14 @@
+
+menu "Select prplmesh-process-manager build options"
+    depends on PACKAGE_prplmesh-process-manager
+
+config PRPLMESH_PROCESS_MANAGER_START_ORDER
+    int "prplmesh-process-manager start up order"
+    default 99
+
+config PRPLMESH_PROCESS_MANAGER_STOP_ORDER
+    int "prplmesh-process-manager stop order"
+    default 0
+
+endmenu
+
