@@ -1,0 +1,10 @@
+
+# Due to bug PCF-2203 BAF generate broken OpenWRT Makefiles
+# As recommended by SaH in comment to PCF-1774 such cases should be solved with Makefile.append
+define SAHInit/Install
+	install -d $(1)/etc/rc.d/
+	if [[ "${CONFIG_PACKAGE_procd}" != "y" && "${CONFIG_PACKAGE_prplmesh-process-manager}" != "y" ]]; then \
+	ln -sfr $(1)/etc/init.d/$(COMPONENT) $(1)/etc/rc.d/S$(CONFIG_SAH_SERVICES_SENSING_START_ORDER)$(COMPONENT); \
+	ln -sfr $(1)/etc/init.d/$(COMPONENT) $(1)/etc/rc.d/K$(CONFIG_SAH_SERVICES_SENSING_STOP_ORDER)$(COMPONENT); \
+	fi
+endef

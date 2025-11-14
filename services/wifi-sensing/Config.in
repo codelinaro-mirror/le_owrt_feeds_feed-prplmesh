@@ -19,10 +19,6 @@ config SAH_SERVICES_SENSING_STOP_ORDER
     int "Stop order"
     default 1
 
-config SAH_SERVICES_SENSING_PROCD_SUPPORT
-    bool "Installs procd init script in stead of the default init script"
-    default PACKAGE_procd
-
 endmenu
 
 endif
