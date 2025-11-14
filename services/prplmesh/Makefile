@@ -165,6 +165,9 @@ define Package/prplmesh/install
 	$(INSTALL_DIR) $(1)/etc/acl/admin
 	$(INSTALL_DIR) $(1)/etc/amx/tr181-device/extensions
 	$(INSTALL_BIN) ./files/etc/init.d/* $(1)/etc/init.d/
+ifeq ($(CONFIG_PACKAGE_prplmesh-process-manager),y)
+	echo 'enable() { return 0; }' >>$(1)/etc/init.d/prplmesh
+endif
 	$(INSTALL_BIN) ./files/etc/uci-defaults/* $(1)/etc/uci-defaults/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/bin $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/scripts $(1)/opt/prplmesh/
