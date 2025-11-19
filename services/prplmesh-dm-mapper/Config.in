@@ -1,0 +1,14 @@
+
+menu "Select DataModel Mapper build options"
+    depends on PACKAGE_prplmesh-dm-mapper
+
+config PRPLMESH_DM_MAPPER_START_ORDER
+    int "prplmesh-dm-mapper start up order"
+    default 99
+
+config PRPLMESH_DM_MAPPER_STOP_ORDER
+    int "prplmesh-dm-mapper stop order"
+    default 0
+
+endmenu
+
