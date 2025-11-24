@@ -4,9 +4,11 @@ PKG_NAME:=prplmesh
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=9fa1af998900c1f8e7245a7fcda24e5954a59117
+PKG_SOURCE_VERSION:=650da65a69cfc9ee42d5c0eddded1efb7276e2c9
+#hash of current feature/PPM-3351
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
-PKG_MIRROR_HASH:=2984d5e14e812582cd6e4eff1a63a0392a53dbfecf5acbf49f8fe96a264a116d
+#PKG_MIRROR_HASH:=2984d5e14e812582cd6e4eff1a63a0392a53dbfecf5acbf49f8fe96a264a116d
+PKG_MIRROR_HASH=skip
 PKG_SOURCE_DATE:=2025-10-28
 PKG_MAINTAINER:=Frederik Van Bogaert <frederik.vanbogaert@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
