@@ -3,13 +3,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.11.1
+PKG_VERSION:=check-active-apmld-in-vap-do-enable
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.11.1.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.11.1
-PKG_HASH:=0070f9f97ed144e516ade35d5852838b28899fe981e246a67b1f2164262091a2
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.11.1
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=check-active-apmld-in-vap-do-enable
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
