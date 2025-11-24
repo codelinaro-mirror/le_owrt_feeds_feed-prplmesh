@@ -3,11 +3,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=PPW-1190-temp-remove-protected
+PKG_VERSION:=feature_PPM-3434-split-multiapprofile
 SHORT_DESCRIPTION:=prplMesh WHM
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=PPW-1190-temp-remove-protected
+PKG_SOURCE_VERSION:=feature_PPM-3434-split-multiapprofile
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
 PKG_MIRROR_HASH:=skip
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
