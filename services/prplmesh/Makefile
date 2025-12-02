@@ -4,9 +4,9 @@ PKG_NAME:=prplmesh
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=4ddd9df30799a2b7509ce5452ca22cccf5d391fe
+PKG_SOURCE_VERSION:=3093c2cdb540604502d033d6f8c656709dc0ae24
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
-PKG_MIRROR_HASH:=6f2c7d291b691539da392e50507153173cdf762c26dfe2d124cac43732538fb2
+PKG_MIRROR_HASH:=skip
 PKG_SOURCE_DATE:=2025-11-24
 PKG_MAINTAINER:=Cihangir Odabas <cihangir.odabas@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
