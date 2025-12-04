@@ -3,13 +3,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.14.2
+PKG_VERSION:=v7.14.3
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.14.2.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.14.2
-PKG_HASH:=e066b7a05681d92f36cd70973a7acae6fe33bae73d9075ee85b555a558b4c4c1
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.14.2
+PKG_SOURCE:=pwhm-v7.14.3.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.14.3
+PKG_HASH:=93394c9c2bdd008d417ebbb66d26d3ed4804162840943453216dce505445b5e1
+PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.14.3
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
@@ -49,6 +49,8 @@ define Package/$(PKG_NAME)
   DEPENDS += +odl-generator
   DEPENDS += +TARGET_intel_x86&&PACKAGE_mod-whm-debug:kmod-iwlwav-driver-uci-debug
   DEPENDS += +TARGET_intel_x86&&PACKAGE_mod-whm:kmod-iwlwav-driver-uci
+  DEPENDS += +PACKAGE_kmod-cfg80211:kmod-mac80211
+  DEPENDS += +PACKAGE_kmod-cfg80211-qca:kmod-mac80211-qca
   MENU:=1
 endef
 
