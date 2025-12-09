@@ -2,10 +2,10 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=prplmesh
 PKG_RELEASE:=1
-PKG_VERSION:=PPM-3649-connect-to-dm-mapper
+PKG_VERSION:=1211b77e457fee92d3f474faa7b307fc333c05d3
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=feature/PPM-3649-connect-to-dm-mapper
+PKG_SOURCE_VERSION:=1211b77e457fee92d3f474faa7b307fc333c05d3
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
 PKG_MIRROR_HASH:=skip
 PKG_SOURCE_DATE:=2025-10-28
