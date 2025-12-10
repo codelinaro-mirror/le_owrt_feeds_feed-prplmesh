@@ -3,13 +3,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.14.11
+PKG_VERSION:=prplmesh_PPM-3575-fix-finding-bandwidth-for-channel
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.14.11.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.14.11
-PKG_HASH:=009fe8adb689777e3b54bef2ec045c77879e8786d92c2751d345e5e98297ddd7
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.14.11
+PKG_SOURCE:=pwhm-prplmesh_PPM-3575-fix-finding-bandwidth-for-channel.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/prplmesh_PPM-3575-fix-finding-bandwidth-for-channel
+PKG_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-prplmesh_PPM-3575-fix-finding-bandwidth-for-channel
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
