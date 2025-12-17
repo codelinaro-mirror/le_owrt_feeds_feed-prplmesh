@@ -53,6 +53,7 @@
                 parameter Enable = 0;
                 parameter IEEE80211kEnabled = 1;
                 parameter MultiAPType = "BackhaulBSS";
+                parameter BridgeInterface = "{{BD.Bridges.Lan.Name}}";
 {% if ((Radio.OperatingFrequency == "5GHz") || (Radio.OperatingFrequency == "6GHz")) : %}
                 parameter WDSEnable = 1;
 {% endif %}
