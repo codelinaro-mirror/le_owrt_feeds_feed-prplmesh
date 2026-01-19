@@ -43,6 +43,7 @@ define Package/$(PKG_NAME)
   DEPENDS += +libamxb
   DEPENDS += +libamxs
   DEPENDS += +amxrt
+  DEPENDS += +zlib
   MENU:=1
 endef
 
