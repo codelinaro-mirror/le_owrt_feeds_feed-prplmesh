@@ -33,6 +33,7 @@
             instance add ({{apindex + 1}}, "backhaul_{{Radio.Alias}}") {
                 parameter SSID = "backhaul_$(HWMACADDRESS)";
                 parameter Enable = 0;
+                parameter MLDUnit = 2;
 {% RadioIndex = BDfn.getRadioIndex(Radio.OperatingFrequency) ; %}
 {% if (RadioIndex >= 0) : %}
                 parameter LowerLayers = "Device.WiFi.Radio.{{RadioIndex + 1}}.";
