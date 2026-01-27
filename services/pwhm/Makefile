@@ -3,13 +3,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.16.0
+PKG_VERSION:=PPW-1209_add_WPA3-Personal-transition
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.16.0.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.16.0
-PKG_HASH:=9745d4484187fff6aaf4e52dcfe98fc695361635f49eb488f258e93a07124f0e
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.16.0
+PKG_SOURCE:=pwhm-PPW-1209_add_WPA3-Personal-transition.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/PPW-1209_add_WPA3-Personal-transition
+PKG_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-PPW-1209_add_WPA3-Personal-transition
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
