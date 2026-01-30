@@ -3,19 +3,17 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=prplmesh
 PKG_RELEASE:=1
 
-PKG_VERSION:=249e9d5d1e7bd91eea56dea39e8b999c6fff9bbb
-PKG_SOURCE_DATE:=2026-01-23
-PKG_HASH:=f4faa81b5c67972cef6a3d4d222c2768bea220a4b6b464ab639384c952c7fba8
-
-PKG_SOURCE:=prplMesh-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_VERSION)
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplMesh-$(PKG_VERSION)
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=16d6d74bd24ae5dd2a2be891b94e639cd6e2231c
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
+PKG_MIRROR_HASH:=2be83adbe9633c69255af80ec7d374caecc4e4da00af751186c72c9f88bd4fa8
+PKG_SOURCE_DATE:=2026-01-30
 PKG_MAINTAINER:=Cihangir Odabas <cihangir.odabas@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
 
 PRPLMESH_VERSION:=$(subst -,.,$(PKG_SOURCE_DATE))
-PRPLMESH_REVISION:=$(PKG_VERSION)
+PRPLMESH_REVISION:=$(PKG_SOURCE_VERSION)
 
 PKG_BUILD_PARALLEL:=1
 PKG_CONFIG_DEPENDS:= \
