@@ -81,6 +81,11 @@ config SAH_WLD_AMX_PROCESSMONITOR
     default y
     depends on PACKAGE_amx-processmonitor
 
+config SAH_WLD_DATAMODEL_MAPPER
+    bool "Enable prplMesh DataModel Mapper connection"
+    default y
+    depends on PACKAGE_prplmesh-dm-mapper
+
 endmenu
 
 endif
