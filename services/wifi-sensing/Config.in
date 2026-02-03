@@ -29,6 +29,11 @@ config SAH_SERVICES_SENSING_AMX_PROCESSMONITOR
     default y
     depends on (SAH_AMX_PROCESSMONITOR || PACKAGE_amx-processmonitor)
 
+config SAH_SERVICES_SENSING_DATAMODEL_MAPPER
+    bool "Enable prplMesh DataModel Mapper connection"
+    default y
+    depends on PACKAGE_prplmesh-dm-mapper
+
 endmenu
 
 endif
