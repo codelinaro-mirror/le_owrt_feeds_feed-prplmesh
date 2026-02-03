@@ -3,17 +3,23 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=prplmesh
 PKG_RELEASE:=1
 
+PKG_VERSION:=PPM-3649-connect-to-dm-mapper
+PKG_SOURCE_DATE:=2026-01-23
+#PKG_HASH:=f4faa81b5c67972cef6a3d4d222c2768bea220a4b6b464ab639384c952c7fba8
+
+#PKG_SOURCE:=prplMesh-$(PKG_VERSION).tar.gz
+#PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_VERSION)
+#PKG_BUILD_DIR:=$(BUILD_DIR)/prplMesh-$(PKG_VERSION)
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=701838982bbb7f23c116ae9f863185794af52633
+PKG_SOURCE_VERSION:=feature/PPM-3649-connect-to-dm-mapper
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
-PKG_MIRROR_HASH:=ed9ff77e2d474019da572a2ed1123795770481412d55065403cffa6ff5ad2330
-PKG_SOURCE_DATE:=2025-12-24
+PKG_MIRROR_HASH:=skip
 PKG_MAINTAINER:=Cihangir Odabas <cihangir.odabas@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
 
 PRPLMESH_VERSION:=$(subst -,.,$(PKG_SOURCE_DATE))
-PRPLMESH_REVISION:=$(PKG_SOURCE_VERSION)
+PRPLMESH_REVISION:=$(PKG_VERSION)
 
 PKG_BUILD_PARALLEL:=1
 PKG_CONFIG_DEPENDS:= \
@@ -172,7 +178,6 @@ define Package/prplmesh/install
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/share $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/etc/acl/admin/prplmesh.json $(1)/etc/acl/admin/
-	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config/controller/odl/01_device-wifi_prplmesh_mapping.odl $(1)/etc/amx/tr181-device/extensions/
 endef
 
 define Package/prplmesh-unit-tests/install
