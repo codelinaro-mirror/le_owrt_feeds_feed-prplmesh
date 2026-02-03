@@ -3,17 +3,23 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=prplmesh
 PKG_RELEASE:=1
 
+PKG_VERSION:=PPM-3649-connect-to-dm-mapper
+PKG_SOURCE_DATE:=2026-01-23
+#PKG_HASH:=f4faa81b5c67972cef6a3d4d222c2768bea220a4b6b464ab639384c952c7fba8
+
+#PKG_SOURCE:=prplMesh-$(PKG_VERSION).tar.gz
+#PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_VERSION)
+#PKG_BUILD_DIR:=$(BUILD_DIR)/prplMesh-$(PKG_VERSION)
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=b0ea789403137e5ab02d85858c1b894cf8aa61d2
+PKG_SOURCE_VERSION:=feature/PPM-3649-connect-to-dm-mapper
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
-PKG_MIRROR_HASH:=798401b3615c4e17a8cc6db17a24b4f975f7a4b54b535fb8b7a578c77e512dc7
-PKG_SOURCE_DATE:=2026-03-06
+PKG_MIRROR_HASH:=skip
 PKG_MAINTAINER:=Cihangir Odabas <cihangir.odabas@prplfoundation.org>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
 
 PRPLMESH_VERSION:=$(subst -,.,$(PKG_SOURCE_DATE))
-PRPLMESH_REVISION:=$(PKG_SOURCE_VERSION)
+PRPLMESH_REVISION:=$(PKG_VERSION)
 
 PKG_BUILD_PARALLEL:=1
 PKG_CONFIG_DEPENDS:= \
@@ -69,7 +75,7 @@ define Package/prplmesh
 		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-act-vlan \
 		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-core \
 		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-flower \
-		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-prio 
+		+!(TARGET_intel_x86||TARGET_intel_mips):kmod-sched-prio
 #	non-intel_x86 neither non-intel_mips neither broadcom dependencies:
 	DEPENDS+= \
 		+!(TARGET_intel_x86||TARGET_intel_mips||TARGET_brcmbca||TARGET_ipq95xx):hostapd-openssl \
@@ -149,6 +155,10 @@ ifeq ($(CONFIG_PRPLMESH_ENABLE_UNIT_TESTS),y)
 	CMAKE_OPTIONS += -DBUILD_TESTS=ON
 endif
 
+ifeq ($(CONFIG_PACKAGE_prplmesh-dm-mapper),y)
+	CMAKE_OPTIONS += -DPRPLMESH_DM_MAPPER=ON
+endif
+
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(INSTALL_DIR) $(1)/usr/include
@@ -175,7 +185,9 @@ endif
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/share $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/etc/acl/admin/prplmesh.json $(1)/etc/acl/admin/
-	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config/controller/odl/01_device-wifi_prplmesh_mapping.odl $(1)/etc/amx/tr181-device/extensions/
+	if [ "$(CONFIG_PACKAGE_prplmesh-dm-mapper)" != "y" ]; then \
+		$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config/controller/odl/01_device-wifi_prplmesh_mapping.odl $(1)/etc/amx/tr181-device/extensions/; \
+	fi
 endef
 
 define Package/prplmesh-unit-tests/install
