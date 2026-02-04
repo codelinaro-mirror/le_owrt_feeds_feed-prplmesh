@@ -71,10 +71,6 @@ config SAH_WLD_ROOT_OBJ_PREFIX
     default "Device."
     depends on SAH_WLD_ENABLE_USP_SERVER_SOCKET
 
-config SAH_SERVICES_PWHM_PROCD_SUPPORT
-    bool "Installs procd init script in stead of the default init script"
-    default PACKAGE_procd
-
 endmenu
 
 endif
