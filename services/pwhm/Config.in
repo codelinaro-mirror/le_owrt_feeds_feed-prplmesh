@@ -75,6 +75,11 @@ config SAH_SERVICES_PWHM_PROCD_SUPPORT
     bool "Installs procd init script in stead of the default init script"
     default PACKAGE_procd
 
+config SAH_WLD_DATAMODEL_MAPPER
+    bool "Enable prplMesh DataModel Mapper connection"
+    default y
+    depends on PACKAGE_prplmesh-dm-mapper
+
 endmenu
 
 endif
