@@ -169,6 +169,11 @@ status() {
         status_function
 }
 
+__uci_reset_certification_mode__() {
+        uci set prplmesh.config.certification_mode=0
+        uci commit prplmesh
+}
+
 __uci_set_repeater_mode__() {
         mode=${1-wired}
         uci set prplmesh.config.management_mode='Multi-AP-Agent'
@@ -185,6 +190,7 @@ __uci_set_repeater_mode__() {
 
 repeater_mode() {
         stop
+        __uci_reset_certification_mode__
         __uci_set_repeater_mode__ $1
         start
         echo "prplmesh repeater mode set"
@@ -202,6 +208,7 @@ __uci_set_gateway_mode__() {
 
 gateway_mode() {
         stop
+        __uci_reset_certification_mode__
         __uci_set_gateway_mode__
         start
         echo "prplmesh gateway mode set"
