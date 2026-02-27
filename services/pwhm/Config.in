@@ -71,6 +71,16 @@ config SAH_WLD_ROOT_OBJ_PREFIX
     default "Device."
     depends on SAH_WLD_ENABLE_USP_SERVER_SOCKET
 
+config SAH_WLD_PROCESS_MANAGER
+    bool "Disable autostart in PWHM when Process Manager enabled"
+    default y
+    depends on PACKAGE_prplmesh-process-manager
+
+config SAH_WLD_AMX_PROCESSMONITOR
+    bool "Install AMX ProcessMonitor files when component enabled"
+    default y
+    depends on PACKAGE_amx-processmonitor
+
 endmenu
 
 endif
