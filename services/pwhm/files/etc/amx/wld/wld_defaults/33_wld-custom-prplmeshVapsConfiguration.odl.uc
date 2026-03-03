@@ -4,7 +4,9 @@
 {% for ( let Itf in BD.Interfaces ) : if ( BDfn.isInterfaceWirelessAp(Itf.Name) ) : %}
 {% if (Itf.OperatingFrequency != "") : %}
             object '{{Itf.Alias}}' {
+{% if ( BDfn.isInterfaceGuest(Itf.Name) ) : %}
                 parameter MultiAPType = "FronthaulBSS";
+{% endif %}
 {% if ( BDfn.isInterfaceGuest(Itf.Name) ) : %}
 {% if (Itf.OperatingFrequency == "2.4GHz") : %}
                 parameter CustomAlias = "vap24gguest";
