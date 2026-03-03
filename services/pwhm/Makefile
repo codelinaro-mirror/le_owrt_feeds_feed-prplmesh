@@ -1,15 +1,15 @@
-# WARNING: Automatically generated file using BAF (Build system Agnostic File) tooling
+# WARNING: Automatically generated file using BAF (Build system Agnostic File) tooling (version v2.39.3)
 # WARNING: You should contribute changes to https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/blob/main/baf.yml instead
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.17.1
+PKG_VERSION:=v7.17.2
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.17.1.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.17.1
-PKG_HASH:=e82f9d9b9c21d0a95bc825697f43b8ac116da7166518d9ab67b60aad6fc331ff
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.17.1
+PKG_SOURCE:=pwhm-v7.17.2.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.17.2
+PKG_HASH:=7b6dd8ed060b882bf0277c297516572e4b688d10434a19663ab76c812224d980
+PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.17.2
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
@@ -20,9 +20,9 @@ PKG_RELEASE:=1
 
 define SAHInit/Install
 	install -d $(1)/etc/rc.d/
-	if [[ "${CONFIG_PACKAGE_procd | CONFIG_SAH_WLD_PROCESS_MANAGER}" != "y" ]]; then \
-	ln -sfr $(1)/etc/init.d/$(CONFIG_SAH_WLD_INIT_SCRIPT) $(1)/etc/rc.d/S$(CONFIG_SAH_WLD_INIT_ORDER)$(CONFIG_SAH_WLD_INIT_SCRIPT); \
-	fi
+ifneq ($(or $(CONFIG_PACKAGE_procd),$(CONFIG_SAH_WLD_PROCESS_MANAGER)),y)
+	ln -sfr $(1)/etc/init.d/$(CONFIG_SAH_WLD_INIT_SCRIPT) $(1)/etc/rc.d/S$(CONFIG_SAH_WLD_INIT_ORDER)$(CONFIG_SAH_WLD_INIT_SCRIPT)
+endif
 endef
 
 include $(INCLUDE_DIR)/package.mk
