@@ -61,12 +61,12 @@
                 object Security {
                     parameter RekeyingInterval = 3600;
 {% if (Radio.OperatingFrequency == "6GHz") : %}
-                    parameter ModesAvailable = "WPA3-Personal,OWE";
+                    parameter ModesAvailable = "WPA3-Personal,WPA3-Personal-Compatibility,OWE";
                     parameter ModeEnabled = "WPA3-Personal";
                     parameter SAEPassphrase = "";
                     parameter SPPAmsdu = 0;
 {% else %}
-                    parameter ModesAvailable = "None,WPA2-Personal,WPA3-Personal,WPA3-Personal-Transition,OWE";
+                    parameter ModesAvailable = "None,WPA2-Personal,WPA3-Personal,WPA3-Personal-Transition,WPA3-Personal-Compatibility,OWE";
                     parameter ModeEnabled = "WPA3-Personal-Transition";
 {% endif %}
                     parameter KeyPassPhrase = "password";
