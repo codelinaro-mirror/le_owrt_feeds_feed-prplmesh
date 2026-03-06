@@ -3,9 +3,9 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=prplmesh
 PKG_RELEASE:=1
 
-PKG_VERSION:=4d3661c1f22b2907bab1192b013d80f80ac9d1a6
-PKG_SOURCE_DATE:=2026-02-09
-PKG_HASH:=602e55b317b1cb0e58232aaca91d920a0c02898fde6c84af39ba778c0419e1aa
+PKG_VERSION:=bed3dbc9d3863a79895db6baea659ceaca7c046f
+PKG_SOURCE_DATE:=2026-03-26
+PKG_HASH:=6cd0acaad15c7e8e9d273f9c8dcd3db1df5a63e37a4f6573c7738398cc86ec61
 
 PKG_SOURCE:=prplMesh-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/archive/$(PKG_VERSION)
