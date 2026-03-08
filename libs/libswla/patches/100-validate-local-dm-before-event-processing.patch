@@ -1,0 +1,84 @@
+--- a/src/swla_lib.c
++++ b/src/swla_lib.c
+@@ -69,6 +69,7 @@
+ #define ME "swlLib"
+ 
+ static amxb_bus_ctx_t* s_amx;
++static amxd_dm_t* s_local_dm;
+ 
+ /**
+  * Initialize the swl library module
+@@ -79,6 +80,7 @@
+ bool swl_lib_initialize(amxb_bus_ctx_t* amx) {
+     ASSERT_NOT_NULL(amx, false, ME, "NULL");
+     s_amx = amx;
++    s_local_dm = amx->dm;
+     swla_delayExec_init();
+     return true;
+ }
+@@ -89,6 +91,7 @@
+ void swl_lib_cleanup() {
+     SAH_TRACEZ_INFO(ME, "Cleanup swl");
+     s_amx = NULL;
++    s_local_dm = NULL;
+     swla_delayExec_cleanup();
+ }
+ 
+@@ -101,13 +104,15 @@
+ 
+ /*
+  * @brief return local dm context
+- * (dm retrieved from registered amxb_bus_ctx_t set with swl_lib_initialize)
++ * (dm cached from registered amxb_bus_ctx_t during swl_lib_initialize)
+  *
+  * @return return local dm context, NULL when not bus ctx is registered (ie missing init)
+  */
+ amxd_dm_t* swl_lib_getLocalDm() {
+-    amxb_bus_ctx_t* busCtx = swl_lib_getBus();
+-    ASSERT_NOT_NULL(busCtx, NULL, ME, "fail to get local dm: Local bus not registered");
+-    return busCtx->dm;
++    ASSERT_NOT_NULL(s_amx, NULL, ME, "fail to get local dm: Local bus not registered");
++    ASSERT_NOT_NULL(s_local_dm, NULL, ME, "fail to get local dm: Local dm not registered");
++    ASSERTS_TRUE(s_local_dm->object.type == amxd_object_root, NULL, ME,
++                 "fail to get local dm: invalid root type(%u)",
++                 s_local_dm->object.type);
++    return s_local_dm;
+ }
+-
+--- a/test/swla_dm/test_dm.c
++++ b/test/swla_dm/test_dm.c
+@@ -643,6 +643,26 @@
+     readObjectInstance2->priv = NULL;
+ }
+ 
++static void test_local_dm_survives_bus_ctx_mutation(void** state) {
++    ttb_amx_t* ttbAmx = *state;
++    amxd_dm_t* savedDm = ttbAmx->bus_ctx->dm;
++    amxb_bus_ctx_t transientBusCtx = *ttbAmx->bus_ctx;
++    amxd_dm_t* localDm = NULL;
++
++    swl_lib_cleanup();
++    assert_true(swl_lib_initialize(&transientBusCtx));
++
++    memset(&transientBusCtx, 0, sizeof(transientBusCtx));
++
++    localDm = swl_lib_getLocalDm();
++    assert_non_null(localDm);
++    assert_ptr_equal(localDm, savedDm);
++    assert_int_equal(localDm->object.type, amxd_object_root);
++
++    swl_lib_cleanup();
++    assert_true(swl_lib_initialize(ttbAmx->bus_ctx));
++}
++
+ int main(int argc _UNUSED, char* argv[] _UNUSED) {
+     sahTraceOpen(__FILE__, TRACE_TYPE_STDERR);
+     sahTraceSetLevel(TRACE_LEVEL_INFO);
+@@ -657,6 +677,7 @@
+         cmocka_unit_test_setup_teardown(test_transaction_exists, s_test_setup, s_test_teardown),
+         cmocka_unit_test_setup_teardown(test_transaction_notExists, s_test_setup, s_test_teardown),
+         cmocka_unit_test_setup_teardown(test_action_read, s_test_setup, s_test_teardown),
++        cmocka_unit_test_setup_teardown(test_local_dm_survives_bus_ctx_mutation, s_test_setup, s_test_teardown),
+         cmocka_unit_test_setup_teardown(test_paramGrpHandler_when_first_param_changed, NULL, NULL),
+         cmocka_unit_test_setup_teardown(test_paramGrpHandler_when_second_param_changed, NULL, NULL),
+         cmocka_unit_test_setup_teardown(test_paramGrpHandler_when_both_params_changed, NULL, NULL),
