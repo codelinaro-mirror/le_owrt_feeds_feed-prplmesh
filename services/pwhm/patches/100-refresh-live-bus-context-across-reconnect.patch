@@ -1,0 +1,100 @@
+diff --git a/src/wld.c b/src/wld.c
+index e39c40172ce0..404c3272f811 100644
+--- a/src/wld.c
++++ b/src/wld.c
+@@ -173,13 +173,34 @@ T_Radio* wld_prevRad(T_Radio* pRad) {
+     return wld_rad_fromIt(it);
+ }
+ 
+-static void wld_plugin_set_busctx(amxo_parser_t* parser) {
++static amxb_bus_ctx_t* wld_plugin_find_busctx(amxo_parser_t* parser) {
++    if(parser == NULL) {
++        return NULL;
++    }
++
+     amxc_llist_for_each(it, amxo_parser_get_connections(parser)) {
+         amxo_connection_t* con = amxc_container_of(it, amxo_connection_t, it);
+         if(con->type == AMXO_BUS) {
+-            wld_plugin_amx = (amxb_bus_ctx_t*) con->priv;
++            return (amxb_bus_ctx_t*) con->priv;
+         }
+     }
++
++    return NULL;
++}
++
++static void wld_plugin_refresh_busctx(void) {
++    wld_plugin_amx = wld_plugin_find_busctx(wld_plugin_parser);
++}
++
++static void wld_plugin_refresh_busctx_cb(const char* const sig_name _UNUSED,
++                                         const amxc_var_t* const data _UNUSED,
++                                         void* const priv _UNUSED) {
++    wld_plugin_refresh_busctx();
++}
++
++static void wld_plugin_set_busctx(amxo_parser_t* parser) {
++    wld_plugin_parser = parser;
++    wld_plugin_refresh_busctx();
+ }
+ 
+ void wld_plugin_init(amxd_dm_t* dm,
+@@ -188,6 +209,8 @@ void wld_plugin_init(amxd_dm_t* dm,
+     wld_plugin_parser = parser;
+     wifi = amxd_dm_findf(wld_plugin_dm, "WiFi.");
+     wld_plugin_set_busctx(parser);
++    amxp_slot_connect(NULL, "connection-added", NULL, wld_plugin_refresh_busctx_cb, NULL);
++    amxp_slot_connect(NULL, "connection-deleted", NULL, wld_plugin_refresh_busctx_cb, NULL);
+ }
+ 
+ bool wld_plugin_start() {
+@@ -204,7 +227,7 @@ bool wld_plugin_start() {
+ 
+     SAH_TRACEZ_WARNING(ME, "Initializing wld (%s:%s)", __DATE__, __TIME__);
+ 
+-    swl_lib_initialize(wld_plugin_amx);
++    swl_lib_initialize(get_wld_plugin_bus());
+ 
+     /* Generate an initial default WPS pin */
+     genSelfPIN();
+@@ -251,7 +274,11 @@ void wld_cleanup() {
+     wld_channel_cleanAll();
+     wld_unregisterAllVendors();
+     swl_lib_cleanup();
++    amxp_slot_disconnect_all(wld_plugin_refresh_busctx_cb);
++    wld_plugin_amx = NULL;
+     wld_plugin_dm = NULL;
++    wld_plugin_parser = NULL;
++    wifi = NULL;
+     init = false;
+     sahTraceRemoveAllZones();
+ }
+@@ -875,6 +902,7 @@ amxd_object_t* get_wld_object() {
+ }
+ 
+ amxb_bus_ctx_t* get_wld_plugin_bus() {
++    wld_plugin_refresh_busctx();
+     return wld_plugin_amx;
+ }
+ 
+diff --git a/src/wld_radio.c b/src/wld_radio.c
+index a3a012fcf33f..872344d20f5e 100644
+--- a/src/wld_radio.c
++++ b/src/wld_radio.c
+@@ -2302,7 +2302,15 @@ void syncData_VendorWPS2OBJ(amxd_object_t* object, T_Radio* pR, int set) {
+         ** Parameters are comming from the DeviceInfo!
+         ** Be sure that the plugin is running before we're passing here.
+         */
+-        int ret = amxb_get(get_wld_plugin_bus(), "DeviceInfo.", 0, &getVar, 1);
++        amxb_bus_ctx_t* bus = get_wld_plugin_bus();
++        int ret = -1;
++
++        if(bus == NULL) {
++            SAH_TRACEZ_WARNING(ME, "No live bus context available for DeviceInfo query");
++        } else {
++            ret = amxb_get(bus, "DeviceInfo.", 0, &getVar, 1);
++        }
++
+         if(ret == AMXB_STATUS_OK) {
+             SAH_TRACEZ_INFO(ME, "Getting WPS Desc from DeviceInfo");
+             amxc_var_t* devInfo = amxc_var_get_first(GET_ARG(&getVar, "0"));
