@@ -149,6 +149,10 @@ ifeq ($(CONFIG_PRPLMESH_ENABLE_UNIT_TESTS),y)
 	CMAKE_OPTIONS += -DBUILD_TESTS=ON
 endif
 
+ifeq ($(CONFIG_PACKAGE_prplmesh-dm-mapper),y)
+	CMAKE_OPTIONS += -DPRPLMESH_DM_MAPPER=ON
+endif
+
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(INSTALL_DIR) $(1)/usr/include
@@ -175,7 +179,9 @@ endif
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/share $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config $(1)/opt/prplmesh/
 	$(CP) $(PKG_INSTALL_DIR)/etc/acl/admin/prplmesh.json $(1)/etc/acl/admin/
-	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config/controller/odl/01_device-wifi_prplmesh_mapping.odl $(1)/etc/amx/tr181-device/extensions/
+	if [ "$(CONFIG_PACKAGE_prplmesh-dm-mapper)" != "y" ]; then \
+		$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config/controller/odl/01_device-wifi_prplmesh_mapping.odl $(1)/etc/amx/tr181-device/extensions/; \
+	fi
 endef
 
 define Package/prplmesh-unit-tests/install
