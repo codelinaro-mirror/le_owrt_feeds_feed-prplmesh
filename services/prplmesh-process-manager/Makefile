@@ -4,10 +4,15 @@ PKG_NAME:=prplmesh-process-manager
 PKG_VERSION:=v0.1.0
 PKG_RELEASE:=1
 
-PKG_SOURCE:=prplmesh-process-manager-v0.1.0.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-process-manager/-/archive/v0.1.0
-PKG_HASH:=e45c6b0b9eef3289d0b60a5c4103df83e9e54f552685984862b580890400fe14
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplmesh-process-manager-v0.1.0
+#PKG_SOURCE:=prplmesh-process-manager-v0.1.0.tar.gz
+#PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-process-manager/-/archive/v0.1.0
+#PKG_HASH:=e45c6b0b9eef3289d0b60a5c4103df83e9e54f552685984862b580890400fe14
+#PKG_BUILD_DIR:=$(BUILD_DIR)/prplmesh-process-manager-v0.1.0
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-process-manager.git
+PKG_SOURCE_VERSION:=feat-27-connect-to-mapper
+#PKG_MIRROR_HASH:=skip
+
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
 
@@ -21,7 +26,8 @@ CMAKE_OPTIONS += -DINIT_SYSTEM=PROCD
 
 CMAKE_OPTIONS += \
         -DPRPLMESH_PROCESS_MANAGER_START_ORDER=$(CONFIG_PRPLMESH_PROCESS_MANAGER_START_ORDER) \
-        -DPRPLMESH_PROCESS_MANAGER_STOP_ORDER=$(CONFIG_PRPLMESH_PROCESS_MANAGER_STOP_ORDER)
+        -DPRPLMESH_PROCESS_MANAGER_STOP_ORDER=$(CONFIG_PRPLMESH_PROCESS_MANAGER_STOP_ORDER) \
+        -DPRPLMESH_DM_MAPPER=ON
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
