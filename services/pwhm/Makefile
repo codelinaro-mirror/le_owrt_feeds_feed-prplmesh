@@ -3,13 +3,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.6.40
+PKG_VERSION:=backport_PPW-1320_airstats_reduce_logs_severity_pwhm
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.6.40.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.6.40
-PKG_HASH:=f1045988908f0ea5424d825a1fa56bad4ec06effc291080454fcd4f58bbc7a55
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.6.40
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=backport/PPW-1320_airstats_reduce_logs_severity_pwhm
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
