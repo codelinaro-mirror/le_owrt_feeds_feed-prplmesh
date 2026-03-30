@@ -1,0 +1,4 @@
+config PACKAGE_mod-whm-wifimapper
+    bool "mod-whm-wifimapper"
+    depends on PACKAGE_pwhm
+    default y
