@@ -182,6 +182,7 @@ endif
 	if [ "$(CONFIG_PACKAGE_prplmesh-dm-mapper)" != "y" ]; then \
 		$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config/controller/odl/01_device-wifi_prplmesh_mapping.odl $(1)/etc/amx/tr181-device/extensions/; \
 	fi
+	$(CP) $(PKG_INSTALL_DIR)/opt/prplmesh/config/controller/odl/01_device-ieee1905_prplmesh_mapping.odl $(1)/etc/amx/tr181-device/extensions/
 endef
 
 define Package/prplmesh-unit-tests/install
