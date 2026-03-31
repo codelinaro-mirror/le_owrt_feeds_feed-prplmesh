@@ -4,10 +4,11 @@ PKG_NAME:=prplmesh-dm-mapper
 PKG_VERSION:=v0.1.0
 PKG_RELEASE:=1
 
-PKG_SOURCE:=prplmesh-dm-mapper-v0.1.0.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-dm-mapper/-/archive/v0.1.0
-PKG_HASH:=7437d3103b9db6be35d7549dbaae446dd0988cbc03195fab4fa3e54a8a4b4fdc
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplmesh-dm-mapper-v0.1.0
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-dm-mapper.git
+PKG_SOURCE_VERSION:=PPW-1728_fix_coverity_in_mapper
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
