@@ -6,9 +6,11 @@ PKG_NAME:=pwhm
 PKG_VERSION:=v7.27.8
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.27.8.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.27.8
-PKG_HASH:=48e37f2168501608462498fcf760eebd3f262237bade75a4fc6e0203f5d04d9e
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
+PKG_SOURCE_VERSION:=a31dab65b7aaa4adc12166e9d17fd52606baa841
+PKG_HASH=skip
+PKG_MIRROR_HASH=skip
 PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.27.8
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
