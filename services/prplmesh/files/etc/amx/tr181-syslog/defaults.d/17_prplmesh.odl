@@ -1,0 +1,149 @@
+%populate {
+    object 'Syslog' {
+        object 'Template' {
+            instance add('prplmesh_template', 'Alias' = "prplmesh_template") {
+                parameter 'Expression' = "\"$\{FULLDATE\} $\{MSG}\\n\"";
+                parameter 'EscapeMessage' = false;
+            }
+        }
+
+        object 'Filter' {
+            instance add('prplmesh_backhaul', 'Alias' = "prplmesh_backhaul") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_backhaul:";
+            }
+            instance add('prplmesh_agent', 'Alias' = "prplmesh_agent") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_agent:";
+            }
+            instance add('prplmesh_ap0', 'Alias' = "prplmesh_ap0") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_ap_manager_wlan0:";
+            }
+            instance add('prplmesh_ap1', 'Alias' = "prplmesh_ap1") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_ap_manager_wlan1:";
+            }
+            instance add('prplmesh_ap2', 'Alias' = "prplmesh_ap2") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_ap_manager_wlan2:";
+            }
+            instance add('prplmesh_monitor0', 'Alias' = "prplmesh_monitor0") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_monitor_wlan0:";
+            }
+            instance add('prplmesh_monitor1', 'Alias' = "prplmesh_monitor1") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_monitor_wlan1:";
+            }
+            instance add('prplmesh_monitor2', 'Alias' = "prplmesh_monitor2") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_monitor_wlan2:";
+            }
+            instance add('prplmesh_vendor', 'Alias' = "prplmesh_vendor") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_vendor_message:";
+            }
+            instance add('prplmesh_controller', 'Alias' = "prplmesh_controller") {
+                parameter 'PatternMatch' = "^prplmesh: beerocks_controller:";
+            }
+            instance add('prplmesh_transport', 'Alias' = "prplmesh_transport") {
+                parameter 'PatternMatch' = "^prplmesh: transport:";
+            }
+        }
+
+        object 'Action' {
+            instance add('backhaul', 'Alias' = "backhaul") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_backhaul\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_backhaul.log";
+                }
+            }
+            instance add('agent', 'Alias' = "agent") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_agent\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_agent.log";
+                }
+            }
+            instance add('ap0', 'Alias' = "ap0") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_ap0\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_ap_manager_wlan0.log";
+                }
+            }
+            instance add('ap1', 'Alias' = "ap1") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_ap1\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_ap_manager_wlan1.log";
+                }
+            }
+            instance add('ap2', 'Alias' = "ap2") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_ap2\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_ap_manager_wlan2.log";
+                }
+            }
+            instance add('monitor0', 'Alias' = "monitor0") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_monitor0\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_monitor_wlan0.log";
+                }
+            }
+            instance add('monitor1', 'Alias' = "monitor1") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_monitor1\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_monitor_wlan1.log";
+                }
+            }
+            instance add('monitor2', 'Alias' = "monitor2") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_monitor2\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_monitor_wlan2.log";
+                }
+            }
+            instance add('vendormsg', 'Alias' = "vendormsg") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_vendor\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_vendor_message.log";
+                }
+            }
+            instance add('controller', 'Alias' = "controller") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_controller\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/beerocks_controller.log";
+                }
+            }
+            instance add('transport', 'Alias' = "transport") {
+                parameter 'SourceRef' = "Device.Syslog.Source.[Alias == \"system\"]";
+                parameter 'FilterRef' = "Device.Syslog.Filter.[Alias == \"prplmesh_transport\"]";
+                parameter 'TemplateRef' = "Device.Syslog.Template.[Alias == \"prplmesh_template\"]";
+                object 'LogFile' {
+                    parameter 'Enable' = true;
+                    parameter 'FilePath' = "file://${log-dir}/prplmesh/transport.log";
+                }
+            }
+        }
+    }
+}
+
