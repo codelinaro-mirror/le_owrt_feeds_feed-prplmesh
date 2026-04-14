@@ -22,6 +22,10 @@
                 parameter CustomAlias = "vap6ghome";
 {% endif %}
 {% endif %}
+
+                object IEEE80211u {
+                    parameter InterworkingEnable = 1;
+                }
             }
 {% endif%}
 {% endif; endfor; %}
@@ -75,6 +79,9 @@
                     parameter ConfigMethodsEnabled = "PhysicalPushButton,VirtualPushButton,Display,VirtualDisplay,PIN";
                     parameter Configured = 1;
                     parameter Enable = 0;
+                }
+                object IEEE80211u {
+                    parameter InterworkingEnable = 1;
                 }
             }
         }
