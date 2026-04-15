@@ -3,13 +3,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=wifi-sensing
-PKG_VERSION:=v0.6.0
+PKG_VERSION:=v0.6.1
 SHORT_DESCRIPTION:=WiFi Sensing
 
-PKG_SOURCE:=wifi-sensing-v0.6.0.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/wifi-sensing/-/archive/v0.6.0
-PKG_HASH:=1bfdd6aa59420e585a2869555b7cd647c89d538cbc3ac5f9b7926c9c1149f2cf
-PKG_BUILD_DIR:=$(BUILD_DIR)/wifi-sensing-v0.6.0
+PKG_SOURCE:=wifi-sensing-v0.6.1.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/wifi-sensing/-/archive/v0.6.1
+PKG_HASH:=d518dd596d8c1615ef79540d02e062a5678ed8b097a5e30c5b66f842696d331e
+PKG_BUILD_DIR:=$(BUILD_DIR)/wifi-sensing-v0.6.1
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
@@ -43,6 +43,7 @@ define Package/$(PKG_NAME)
   DEPENDS += +libamxb
   DEPENDS += +libamxs
   DEPENDS += +amxrt
+  DEPENDS += +zlib
   MENU:=1
 endef
 
