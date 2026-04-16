@@ -64,7 +64,7 @@
                     parameter ModesAvailable = "WPA3-Personal,WPA3-Personal-Compatibility,OWE";
                     parameter ModeEnabled = "WPA3-Personal";
                     parameter SAEPassphrase = "";
-                    parameter SPPAmsdu = 0;
+                    parameter SPPAMSDU = 0;
 {% else %}
                     parameter ModesAvailable = "None,WPA2-Personal,WPA3-Personal,WPA3-Personal-Transition,WPA3-Personal-Compatibility,OWE";
                     parameter ModeEnabled = "WPA3-Personal-Transition";
