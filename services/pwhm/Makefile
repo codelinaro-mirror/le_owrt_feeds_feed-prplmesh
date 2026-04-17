@@ -3,13 +3,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.22.0
+PKG_VERSION:=PPW-1830-operating-class-is-being-zero
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.22.0.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.22.0
-PKG_HASH:=bf4f0b683219522bb729432252a5e798c3f37ff000a2d5a44306da25eeec3c8e
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.22.0
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=PPW-1830-operating-class-is-being-zero
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
