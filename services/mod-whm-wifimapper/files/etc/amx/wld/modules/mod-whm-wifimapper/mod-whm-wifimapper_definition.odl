@@ -1,0 +1,36 @@
+%config {
+    define-behavior = {
+        existing-parameter = "update"
+    };
+}
+
+%define {
+    select WiFi {
+        select AccessPoint {
+            select Security {
+
+                // TR-181 parameter (hidden)
+                %persistent string KeyPassphrase = "password" {
+                    on action read call hide_value;
+                }
+
+                // Legacy parameter (visible)
+                %persistent string KeyPassPhrase;
+
+                %persistent string SAEPassphrase {
+                    on action read call hide_value;
+                }
+            }
+        }
+    }
+}
+
+%populate {
+    synchronize 'WiFi.' <-> 'WiFi.' {
+        object 'AccessPoint.' <-> 'AccessPoint.' {
+            object 'Security.' <-> 'Security.' {
+                %batch parameter 'KeyPassphrase' -> 'KeyPassPhrase';
+            }
+        }
+    }
+}

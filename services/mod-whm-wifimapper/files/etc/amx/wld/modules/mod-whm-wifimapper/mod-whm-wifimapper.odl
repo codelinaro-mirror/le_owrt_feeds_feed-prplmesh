@@ -1,0 +1,11 @@
+%config {
+    module = "mod-whm-wifimapper";
+
+    mod-trace-zones = {"mapMain" = 200,
+                       "mapMod" = 200
+                      };
+}
+
+import "modules/${module}.so";
+include "modules/${module}/${module}_definition.odl";
+
