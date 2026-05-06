@@ -3,13 +3,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.24.1
+PKG_VERSION:=feature_PPM-3475-DPP-Presence-Announcement
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.24.1.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.24.1
-PKG_HASH:=31d94a5680cc8442ca32f762ce9ed6a9f2b026274d4d0c70aeef7933a8ac7d37
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.24.1
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=feature_PPM-3475-DPP-Presence-Announcement
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
