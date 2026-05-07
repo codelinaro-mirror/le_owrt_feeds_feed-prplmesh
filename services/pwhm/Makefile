@@ -3,13 +3,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=v7.24.2
+PKG_VERSION:=hotfix_PPM-1532-fix-scan-bss-one-channel
 SHORT_DESCRIPTION:=prplMesh WHM
 
-PKG_SOURCE:=pwhm-v7.24.2.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm/-/archive/v7.24.2
-PKG_HASH:=167eb1f4052d28ba6fa129e8d01fd8e04d84022f25853215b3596b11433a4d71
-PKG_BUILD_DIR:=$(BUILD_DIR)/pwhm-v7.24.2
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=hotfix/PPM-1532-fix-scan-bss-one-channel
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_MAINTAINER:=Soft At Home <support.opensource@softathome.com>
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
