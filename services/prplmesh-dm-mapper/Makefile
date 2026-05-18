@@ -1,13 +1,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=prplmesh-dm-mapper
-PKG_VERSION:=v0.3.0
+PKG_VERSION:=PPW-1951-hide-vendor-data-elements-causing-obuspa-and-ubus-datamodel-list-cram-test-failures
 PKG_RELEASE:=1
 
-PKG_SOURCE:=prplmesh-dm-mapper-v0.3.0.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-dm-mapper/-/archive/v0.3.0
-PKG_HASH:=250b01cc0122c42e8f2284396c399eed8128443245ce8b6151ab2334c1f567c9
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplmesh-dm-mapper-v0.3.0
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=PPW-1951-hide-vendor-data-elements-causing-obuspa-and-ubus-datamodel-list-cram-test-failures
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-dm-mapper.git
+PKG_MIRROR_HASH:=skip
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
