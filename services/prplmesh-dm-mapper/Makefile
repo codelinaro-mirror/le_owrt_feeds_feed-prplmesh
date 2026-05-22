@@ -1,13 +1,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=prplmesh-dm-mapper
-PKG_VERSION:=v0.3.1
+PKG_VERSION:=v0.3.2
 PKG_RELEASE:=1
 
-PKG_SOURCE:=prplmesh-dm-mapper-v0.3.1.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-dm-mapper/-/archive/v0.3.1
-PKG_HASH:=fda3ad4dba9f72564dd03db2b924ddccba408ad48f2376577bc02dc924347b31
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplmesh-dm-mapper-v0.3.1
+PKG_SOURCE:=prplmesh-dm-mapper-v0.3.2.tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-dm-mapper/-/archive/v0.3.2
+PKG_HASH:=e3dd17919ca325ee843961ccdb52da9afb9d496847b7e6057e14101254495d9f
+PKG_BUILD_DIR:=$(BUILD_DIR)/prplmesh-dm-mapper-v0.3.2
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
