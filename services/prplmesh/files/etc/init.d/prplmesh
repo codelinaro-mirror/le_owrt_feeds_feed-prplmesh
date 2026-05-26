@@ -66,6 +66,11 @@ get_management_mode() {
 }
 
 start_service() {
+    # FIXME: 'service prplmesh stop' returns before children fully exit,
+    # so any rapid stop followed by start races the new start against
+    # leftover processes. Force-kill them before start.
+    pkill -9 -f "^${PRPLMESH_DIR}/bin/(beerocks_(agent|controller|fronthaul|vendor_message)|ieee1905_transport)( |\$)"
+
     if ! pwhm_ready_poll; then
         echo "pwhm not ready - aborting prplmesh start" >&2
         return 1
@@ -84,8 +89,8 @@ start_service() {
     echo "Starting prplmesh with mode ${mode}"
 
     register_service "prplmesh_transport" "${PRPLMESH_DIR}/bin/ieee1905_transport"
-    # If mode isn't Multi-AP-Agent then it Multi-AP-Controller 
-    # or Multi-AP-Controller-and-Agent so we need to register 
+    # If mode isn't Multi-AP-Agent then it Multi-AP-Controller
+    # or Multi-AP-Controller-and-Agent so we need to register
     # controller process as well
     if [ "${mode}" != "Multi-AP-Agent" ] && [ "${mode}" != "Non-Prpl-Controller-and-Agent" ]; then
         register_service "prplmesh_controller" "${PRPLMESH_DIR}/bin/beerocks_controller"
