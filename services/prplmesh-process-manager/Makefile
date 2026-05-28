@@ -4,10 +4,13 @@ PKG_NAME:=prplmesh-process-manager
 PKG_VERSION:=v0.2.0
 PKG_RELEASE:=1
 
-PKG_SOURCE:=prplmesh-process-manager-v0.2.0.tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-process-manager/-/archive/v0.2.0
-PKG_HASH:=2b50cb022136fda7f13a12d10a616948252c201491d2aace90392f8e34764563
-PKG_BUILD_DIR:=$(BUILD_DIR)/prplmesh-process-manager-v0.2.0
+#PKG_SOURCE:=prplmesh-process-manager-v0.2.0.tar.gz
+#PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-process-manager/-/archive/v0.2.0
+#PKG_HASH:=2b50cb022136fda7f13a12d10a616948252c201491d2aace90392f8e34764563
+#PKG_BUILD_DIR:=$(BUILD_DIR)/prplmesh-process-manager-v0.2.0
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/prplmesh-process-manager.git
+PKG_SOURCE_VERSION:=dev_PPM-4075
 
 PKG_LICENSE:=BSD-2-Clause-Patent
 PKG_LICENSE_FILES:=LICENSE
