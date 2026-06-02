@@ -73,13 +73,13 @@ start_service() {
 
     if ! pwhm_ready_poll; then
         echo "pwhm not ready - aborting prplmesh start" >&2
-        return 1
+        exit 1
     fi
 
     mode="$(get_management_mode)"
     if [ -z "${mode}" ]; then
         echo "failed to get management_mode - aborting prplmesh start" >&2
-        return 1
+        exit 1
     fi
 
     # This is required for solving issue which causing messages not getting to their destination.
@@ -97,8 +97,6 @@ start_service() {
     fi
     register_service "prplmesh_agent" "${PRPLMESH_DIR}/bin/beerocks_agent"
     register_service "prplmesh_vendor_message" "${PRPLMESH_DIR}/bin/beerocks_vendor_message"
-
-    return 0
 }
 
 stop_service() {
@@ -108,5 +106,4 @@ stop_service() {
     deregister_service "prplmesh_transport"
 
     ebtables -D FORWARD -d 01:80:c2:00:00:13 -j DROP
-    return 0
 }
