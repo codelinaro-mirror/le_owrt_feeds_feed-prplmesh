@@ -68,13 +68,13 @@ get_management_mode() {
 start_service() {
     if ! pwhm_ready_poll; then
         echo "pwhm not ready - aborting prplmesh start" >&2
-        return 1
+        exit 1
     fi
 
     mode="$(get_management_mode)"
     if [ -z "${mode}" ]; then
         echo "failed to get management_mode - aborting prplmesh start" >&2
-        return 1
+        exit 1
     fi
 
     # This is required for solving issue which causing messages not getting to their destination.
@@ -84,16 +84,14 @@ start_service() {
     echo "Starting prplmesh with mode ${mode}"
 
     register_service "prplmesh_transport" "${PRPLMESH_DIR}/bin/ieee1905_transport"
-    # If mode isn't Multi-AP-Agent then it Multi-AP-Controller 
-    # or Multi-AP-Controller-and-Agent so we need to register 
+    # If mode isn't Multi-AP-Agent then it Multi-AP-Controller
+    # or Multi-AP-Controller-and-Agent so we need to register
     # controller process as well
     if [ "${mode}" != "Multi-AP-Agent" ] && [ "${mode}" != "Non-Prpl-Controller-and-Agent" ]; then
         register_service "prplmesh_controller" "${PRPLMESH_DIR}/bin/beerocks_controller"
     fi
     register_service "prplmesh_agent" "${PRPLMESH_DIR}/bin/beerocks_agent"
     register_service "prplmesh_vendor_message" "${PRPLMESH_DIR}/bin/beerocks_vendor_message"
-
-    return 0
 }
 
 stop_service() {
@@ -103,5 +101,4 @@ stop_service() {
     deregister_service "prplmesh_transport"
 
     ebtables -D FORWARD -d 01:80:c2:00:00:13 -j DROP
-    return 0
 }
