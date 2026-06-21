@@ -1,0 +1,1176 @@
+diff --git a/include/wld/Utils/wld_config.h b/include/wld/Utils/wld_config.h
+index 76680096c656..d4f61eb98d77 100644
+--- a/include/wld/Utils/wld_config.h
++++ b/include/wld/Utils/wld_config.h
+@@ -67,6 +67,10 @@
+ const char* wld_config_getEnableSyncModeStr();
+ bool wld_config_isEnableSyncNeeded(bool toIntf);
+ 
++/**
++ * @brief return minimum statistics refresh period in milliseconds
++ */
++uint16_t wld_config_getMinStatsRefreshPeriodMs();
+ 
+ #endif /* SRC_INCLUDE_WLD_UTILS_WLD_CONFIG_H_ */
+ 
+diff --git a/include/wld/wld.h b/include/wld/wld.h
+index 8869297af1ee..fc1975a60a15 100644
+--- a/include/wld/wld.h
++++ b/include/wld/wld.h
+@@ -104,6 +104,7 @@
+ #include "wld_mld.h"
+ #include "Utils/wld_autoCommitRadData.h"
+ #include "Utils/wld_dmnMgt.h"
++#include "Utils/wld_config.h"
+ #include "swla/swla_radioStandards.h"
+ #include "swla/swla_chanspec.h"
+ #include "swl/swl_uuid.h"
+@@ -902,13 +903,13 @@ typedef struct {
+     swl_timeMono_t lastDeauthAssocTime;            /* association timestamp of last de-authenticated connection */
+     void* vendor;                                  /* Pointer for wifi chipset vendor data */
+     wld_extMod_dataList_t extDataList;             /* list of extention data for non-chipset vendor modules */
+-    swla_dm_objActionReadCtx_t onActionReadCtx;
++    swla_dm_objActionReadCtx_t onActionReadCtx;    /** AssociatedDevice object read handler ctx */
+     uint32_t nrCreatedAffiliatedStaLinks;
+-    amxc_llist_t affiliatedStaList;         /* list of wld_affiliatedSta_t objects */
+-    wld_wds_intf_t* wdsIntf;                /* wds interface info */
++    amxc_llist_t affiliatedStaList;                /* list of wld_affiliatedSta_t objects */
++    wld_wds_intf_t* wdsIntf;                       /* wds interface info */
+     amxp_timer_t* delayDisassocNotif;
+-    swl_mlo_mode_e mloMode;                 /* the Mlo mode */
+-    wld_stats_t lastStats;                  /* last retrieved stats (used to calculate diff for mlo link stats) */
++    swl_mlo_mode_e mloMode;                        /* the Mlo mode */
++    wld_stats_t lastStats;                         /* last retrieved stats (used to calculate diff for mlo link stats) */
+ } T_AssociatedDevice;
+ 
+ 
+@@ -1784,6 +1785,9 @@ struct S_SSID {
+      * - when not assigned, the default active mld link mac is assumed to be the relative SSID mac.
+      */
+     swl_macBin_t currentAssignedMldLinkMac;
++
++    /** SSID.Stats object read handler ctx */
++    swla_dm_objActionReadCtx_t onReadStatsCtx;
+ };
+ 
+ typedef struct {
+@@ -2169,15 +2173,15 @@ struct S_EndPoint {
+     wld_tinyRoam_t* tinyRoam;
+     wld_fcallState_t statsCall;
+ 
+-    wld_nl80211_listener_t* nl80211Listener;  /* nl80211 events listener */
+-    wld_wpaCtrlInterface_t* wpaCtrlInterface; /* wpaCtrlInterface to wpa_supplicant interface */
+-    wld_secDmn_t* wpaSupp;                    /* wpa_supplicant daemon context. */
+-    uint64_t wDevId;                          /* nl80211 wireless device id */
+-    T_EndPointStats stats;
+-    swla_dm_objActionReadCtx_t onActionReadCtx;
+-    amxp_timer_t* refreshChspecTimer;         /* Timer used to refresh connected backhaul chanspec */
+-    bool isMainLink;                          /** whether the EP link is actively used in mgmt traffic */
+-    swl_macBin_t peerLinkMac;                 /** active peer Link MAC: equals remote bssid for non-MLD, or peer APMLD link MAC for bSTAMLD links */
++    wld_nl80211_listener_t* nl80211Listener;    /** nl80211 events listener */
++    wld_wpaCtrlInterface_t* wpaCtrlInterface;   /** wpaCtrlInterface to wpa_supplicant interface */
++    wld_secDmn_t* wpaSupp;                      /** wpa_supplicant daemon context. */
++    uint64_t wDevId;                            /** nl80211 wireless device id */
++    T_EndPointStats stats;                      /** last retrieved endpoint statistics */
++    swla_dm_objActionReadCtx_t onActionReadCtx; /** EndPoint object read handler ctx */
++    amxp_timer_t* refreshChspecTimer;           /** Timer used to refresh connected backhaul chanspec */
++    bool isMainLink;                            /** whether the EP link is actively used in mgmt traffic */
++    swl_macBin_t peerLinkMac;                   /** active peer Link MAC: equals remote bssid for non-MLD, or peer APMLD link MAC for bSTAMLD links */
+ };
+ 
+ typedef struct {
+diff --git a/include/wld/wld_util.h b/include/wld/wld_util.h
+index 329ab4377e67..b24a37366aa8 100644
+--- a/include/wld/wld_util.h
++++ b/include/wld/wld_util.h
+@@ -492,6 +492,36 @@ swl_rc_ne wld_util_copyStaCapsInfoFromIEs(wld_assocDev_capabilities_t* cap, swl_
+  */
+ swl_80211_ehtOpIE_t wld_util_buildEhtOperationIE(swl_chanspec_t chSpec, uint32_t nTx, uint32_t nRx, size_t* pDataLen);
+ 
++/*
++ * @brief Handler to match and fill new value of stats dm parameter (ie volatile)
++ *
++ * @param param dm parameter context
++ * @param paramName dm parameter name
++ * @param newVal pointer to new value to be filled by the handler
++ * @param userData optional user data, that could be used for filled param value
++ *
++ * @return handler is expected to return swl_rc_ne error code as follows:
++ *         SWL_RC_OK when param is handled and new value is filled properly
++ *         SWL_RC_CONTINUE when param is not handled (eg: unknown as Stats param)
++ *         error code otherwise (eg: when failing to set the new value)
++ */
++typedef swl_rc_ne (* wld_dm_objStatsParamHdlr_f)(amxd_param_t* param, const char* paramName, amxc_var_t* newVal, void* userData);
++
++/**
++ * @brief utility function iteration over object parameters
++ * and calling user hander for each of them to fill new value variant.
++ * If matched and filled, then the parameter value is applied to the datamodel.
++ * This api is required for updating the statistics parameters (volatile)
++ * and read on request
++ *
++ * @param obj object context
++ * @param userData pointer to optional data used to filled the matched parameter value
++ * @param paramHdlr callback to be called for each parameter
++ *
++ * @return SWL_RC_OK in case of success, error code otherwise
++ */
++swl_rc_ne wld_util_setObjStatsParams(amxd_object_t* obj, void* userData, wld_dm_objStatsParamHdlr_f paramHdlr);
++
+ #ifdef __cplusplus
+ }/* extern "C" */
+ #endif
+diff --git a/odl/wld_definitions.odl b/odl/wld_definitions.odl
+index 6ba7ca53fad2..a2fcce7e9862 100644
+--- a/odl/wld_definitions.odl
++++ b/odl/wld_definitions.odl
+@@ -370,6 +370,18 @@
+ 			on action validate call check_enum ["Off","ToIntf","FromIntf","Mirrored"];
+ 			default "Mirrored";
+ 		}
++		
++		/**
++		 * Minimum statistic refresh period in milliseconds
++		 * This parameter aims to prevent sending too frequent refresh request to driver.
++		 * When multiple queries are received on datamodel side within this period,
++		 * then the last statistics are returned
++		 * Default: 500ms
++		 */
++		%persistent uint16 MinStatsRefreshPeriodMs {
++			on action validate call check_minimum 100;
++			default 500;
++		}
+ 	}
+ 	
+ 	%persistent object Vendor {
+diff --git a/src/Plugin/wifiGen_fsm.c b/src/Plugin/wifiGen_fsm.c
+index 74ccc31243c7..89bd8985d63c 100644
+--- a/src/Plugin/wifiGen_fsm.c
++++ b/src/Plugin/wifiGen_fsm.c
+@@ -93,6 +93,12 @@
+  */
+ #define NO_ACTION_ID -1
+ 
++/**
++ * @brief Minimum delay (ms) for a BSS or link to be fully removed
++ *        before proceeding to the next FSM action.
++ */
++#define BSS_REMOVAL_DELAY_MS 500
++
+ typedef struct {
+     T_Radio* pRad;
+     swl_chanspec_t chanspec;
+@@ -748,10 +754,11 @@ static bool s_tryRemovePrimLinkFirst(T_AccessPoint* pAP, T_Radio* pRad) {
+ static bool s_removeMloLink(T_AccessPoint* pAP, T_Radio* pRad) {
+     ASSERTS_NOT_NULL(pAP, true, ME, "NULL");
+     ASSERTS_NOT_NULL(pRad, true, ME, "NULL");
++    bool ret = true;
+     if(s_tryRemovePrimLinkFirst(pAP, pRad)) {
+-        pRad->fsmRad.timeout_msec = pRad->beaconPeriod * pRad->mLReconfigurationCount + 300;
+         /** Waiting for primary link removal to complete */
+-        return false;
++        ret = false;
++        goto exit;
+     }
+ 
+     SAH_TRACEZ_INFO(ME, "%s: removing MLO link", pAP->alias);
+@@ -761,15 +768,16 @@ static bool s_removeMloLink(T_AccessPoint* pAP, T_Radio* pRad) {
+         s_schedNextAction(SECDMN_ACTION_OK_NEED_RE_ADD, pAP, pRad);
+         return true;
+     }
+-
+     SAH_TRACEZ_INFO(ME, "%s: MLO link remove command sent successfully", pAP->alias);
++
++exit:
+     /**
+      * Link is removed after N beacon frames.
+      * Set timeout to wait for link removal completion before re-adding BSS.
+-     * Calculation: beaconPeriod (typically 100ms) * pRad->mLReconfigurationCount + margin (300ms)
++     * Calculation: beaconPeriod (typically 100ms) * pRad->mLReconfigurationCount + BSS_REMOVAL_DELAY_MS
+      */
+-    pRad->fsmRad.timeout_msec = pRad->beaconPeriod * pRad->mLReconfigurationCount + 300;
+-    return true;
++    pRad->fsmRad.timeout_msec = pRad->beaconPeriod * pRad->mLReconfigurationCount + BSS_REMOVAL_DELAY_MS;
++    return ret;
+ }
+ 
+ /**
+@@ -834,7 +842,8 @@ static bool s_removeBss(T_AccessPoint* pAP, T_Radio* pRad, bool isSingleLinkMode
+         }
+     }
+ 
+-    pRad->fsmRad.timeout_msec = 500;
++    /** Preserve any longer timeout already set by a link removal action */
++    pRad->fsmRad.timeout_msec = SWL_MAX(pRad->fsmRad.timeout_msec, (unsigned int) BSS_REMOVAL_DELAY_MS);
+     return true;
+ }
+ 
+@@ -952,6 +961,7 @@ static bool s_doStopHostapd(T_Radio* pRad) {
+         }
+         return true;
+     }
++
+     SAH_TRACEZ_INFO(ME, "%s: stop hostapd", pRad->Name);
+     rc = wifiGen_hapd_stopDaemon(pRad);
+     SAH_TRACEZ_INFO(ME, "%s: stop hostapd returns rc : %d", pRad->Name, rc);
+@@ -960,20 +970,42 @@ static bool s_doStopHostapd(T_Radio* pRad) {
+      * Therefore, hapd rad iface need to be disabled to force stop all vaps
+      */
+     if((rc == SWL_RC_CONTINUE) && (wifiGen_hapd_countGrpMembers(pRad) > 1)) {
+-        /*
+-         * if hostapd instance is being stopped,
+-         * with having Apmld reconf action for a non multi-link,
+-         * then the stop action will override the mlo reconf action
++        /**
++         * For each active vap:
++         * - APMLD (nLinks >= 2): schedule link removal
++         * - otherwise (non-MLD, single link): mark that REMOVE_HOSTAPD is required to clean it up
+          */
+-        if(hasApMldAction) {
+-            if(hasApMldMultiLink) {
+-                SAH_TRACEZ_INFO(ME, "%s: let mld handler manage radio disabling", pRad->Name);
+-                wld_rad_fsm_clearFsmBitForAll(pRad, GEN_FSM_DISABLE_HOSTAPD);
+-                return true;
++        if(hasApMldMultiLink) {
++            wld_rad_fsm_clearFsmBitForAll(pRad, GEN_FSM_DISABLE_HOSTAPD);
++            if(s_isLinkRemoveSupported(pRad)) {
++                bool removeConfRequired = false;
++                T_AccessPoint* pAP = NULL;
++                wld_rad_forEachAp(pAP, pRad) {
++                    if(!wld_wpaCtrlInterface_isReady(pAP->wpaCtrlInterface)) {
++                        continue;
++                    }
++
++                    uint32_t nLinks = 0;
++                    bool isApMld = (wld_ap_hostapd_getNumMldLinks(pAP, &nLinks) >= SWL_RC_OK) && (nLinks >= 2);
++                    if(!isApMld) {
++                        removeConfRequired = true;
++                        continue;
++                    }
++
++                    SAH_TRACEZ_INFO(ME, "%s: need to remove link", pAP->alias);
++                    setBitLongArray(pAP->fsm.FSM_AC_BitActionArray, FSM_BW, GEN_FSM_REMOVE_LINK);
++                    setBitLongArray(pRad->fsmRad.FSM_AC_BitActionArray, FSM_BW, GEN_FSM_REMOVE_LINK);
++                }
++
++                if(!removeConfRequired) {
++                    return true;
++                }
+             }
+-            SAH_TRACEZ_WARNING(ME, "%s: skip mld handler as no multilink ", pRad->Name);
++        } else if(hasApMldAction) {
++            SAH_TRACEZ_WARNING(ME, "%s: skip mld handler as no multilink", pRad->Name);
+             s_clearApAcAction(pRad, GEN_FSM_MOD_MLD);
+         }
++
+         if(wld_secDmn_hasReadyGlobalCtrlIface(pRad->hostapd)) {
+             SAH_TRACEZ_INFO(ME, "%s: need to remove config", pRad->Name);
+             setBitLongArray(pRad->fsmRad.FSM_AC_BitActionArray, FSM_BW, GEN_FSM_REMOVE_HOSTAPD);
+diff --git a/src/Plugin/wifiGen_vap.c b/src/Plugin/wifiGen_vap.c
+index d6f6ccf29cb7..bf17eff67169 100644
+--- a/src/Plugin/wifiGen_vap.c
++++ b/src/Plugin/wifiGen_vap.c
+@@ -208,8 +208,8 @@ static void s_fillMldAssocDevInfo(T_AccessPoint* pAP, T_AssociatedDevice* pAD, w
+     ASSERT_NOT_NULL(pAD, , ME, "no associated device entry!");
+     ASSERTS_NOT_NULL(pAP->pSSID, , ME, "%s: no SSID", pAP->name);
+     int16_t assocLinkId = wld_ssid_getMLDLinkID(pAP->pSSID);
+-    ASSERTI_TRUE(assocLinkId >= 0, , ME, "%s: Accesspoint is not APMLD link", pAP->name);
+-    ASSERTI_TRUE(pAD->operatingStandard >= SWL_RADSTD_BE, , ME, "%s: AssociatedDevice %s is not 11be capable", pAP->name, pAD->Name);
++    ASSERTS_TRUE(assocLinkId >= 0, , ME, "%s: Accesspoint is not APMLD link", pAP->name);
++    ASSERTS_TRUE(pAD->operatingStandard >= SWL_RADSTD_BE, , ME, "%s: AssociatedDevice %s is not 11be capable", pAP->name, pAD->Name);
+     wld_affiliatedSta_t* afSta = NULL;
+     T_AccessPoint* curActiveApLinks[pStationInfo->nrLinks + 1];
+     memset(curActiveApLinks, 0, sizeof(curActiveApLinks));
+@@ -329,16 +329,15 @@ static uint32_t s_getNetlinkAllStaInfo(T_AccessPoint* pAP) {
+     return nrStations;
+ }
+ 
+-/*
+- * lowest period since last refresh of assoc dev info in ms
++/**
++ * @brief check lowest period since last refresh of assoc dev info in ms
+  * to avoid too frequent low level requests
+  */
+-#define MIN_AD_INFO_REFRESH_PERIOD_MS 500
+ static bool s_isStationInfoOld(T_AssociatedDevice* pAD) {
+     ASSERTS_NOT_NULL(pAD, false, ME, "NULL");
+     swl_timeSpecMono_t now = swl_timespec_getMonoVal();
+     if(swl_timespec_isZero(&pAD->lastSampleTime)
+-       || (swl_timespec_diffToMillisec(&pAD->lastSampleTime, &now) > MIN_AD_INFO_REFRESH_PERIOD_MS)
++       || (swl_timespec_diffToMillisec(&pAD->lastSampleTime, &now) > pAD->onActionReadCtx.minRefreshPeriodMs)
+        || (pAD->latestStateChangeTime >= pAD->lastSampleTime.tv_sec)) {
+         return true;
+     }
+diff --git a/src/Utils/wld_config.c b/src/Utils/wld_config.c
+index 97b249ee58cb..f4b45fafadf1 100644
+--- a/src/Utils/wld_config.c
++++ b/src/Utils/wld_config.c
+@@ -115,8 +115,39 @@ static void s_setEnableSyncMode_pwf(void* priv _UNUSED, amxd_object_t* object _U
+     s_curSyncMode = newMode;
+ }
+ 
++/**
++ * @brief: Default minimum statistic refresh period in milliseconds
++ */
++#define MIN_STATS_REFRESH_PERIOD_MS 500
++
++/**
++ * @brief: global minimum statistic refresh period
++ */
++static uint16_t s_minStatsRefreshPeriodMs = MIN_STATS_REFRESH_PERIOD_MS;
++
++/**
++ * @brief return global minimum statistic refresh period in milliseconds
++ */
++uint16_t wld_config_getMinStatsRefreshPeriodMs() {
++    return s_minStatsRefreshPeriodMs;
++}
++
++/**
++ * @brief dm handler of parameter MinStatsRefreshPeriodMs
++ */
++static void s_setMinStatsRefreshPeriodMs_pwf(void* priv _UNUSED, amxd_object_t* object _UNUSED,
++                                             amxd_param_t* param _UNUSED,
++                                             const amxc_var_t* const newValue) {
++    uint16_t newPeriodMs = amxc_var_get_uint16_t(newValue);
++    ASSERTI_NOT_EQUALS(newPeriodMs, s_minStatsRefreshPeriodMs, , ME, "EQUAL");
++    SAH_TRACEZ_INFO(ME, "update MinStatsRefreshPeriodMs %u to %u", s_minStatsRefreshPeriodMs, newPeriodMs);
++    s_minStatsRefreshPeriodMs = newPeriodMs;
++}
++
+ SWLA_DM_HDLRS(sWldConfigParamChangeHandlers,
+-              ARR(SWLA_DM_PARAM_HDLR("EnableSyncMode", s_setEnableSyncMode_pwf)));
++              ARR(SWLA_DM_PARAM_HDLR("EnableSyncMode", s_setEnableSyncMode_pwf),
++                  SWLA_DM_PARAM_HDLR("MinStatsRefreshPeriodMs", s_setMinStatsRefreshPeriodMs_pwf),
++                  ));
+ 
+ void _wld_config_setConf_ocf(const char* const sig_name,
+                              const amxc_var_t* const data,
+diff --git a/src/nl80211/wld_rad_nl80211.c b/src/nl80211/wld_rad_nl80211.c
+index c7ae92251161..a0dd2dc7856d 100644
+--- a/src/nl80211/wld_rad_nl80211.c
++++ b/src/nl80211/wld_rad_nl80211.c
+@@ -326,19 +326,18 @@ swl_rc_ne wld_rad_nl80211_getSurveyInfo(T_Radio* pRadio, wld_nl80211_channelSurv
+     return wld_nl80211_getSurveyInfoExt(wld_nl80211_getSharedState(), ifIndex, &config, ppChanSurveyInfo, pnrChanSurveyInfo);
+ }
+ 
+-/*
+- * lowest period since last air stats calculation in ms
++/**
++ * @brief check lowest period since last air stats calculation in ms
+  * to avoid too small diff counters
+  */
+-#define MIN_AIR_STATS_REFRESH_PERIOD_MS 500
+-static bool s_checkAirStatsTooRecentMs(wld_airStats_t* pStats, uint32_t nowTsMsU32) {
+-    return (pStats && DELTA32(nowTsMsU32, pStats->timestamp) <= MIN_AIR_STATS_REFRESH_PERIOD_MS);
++static bool s_checkAirStatsTooRecentMs(wld_airStats_t* pStats, uint32_t nowTsMsU32, uint32_t minDeltaMsU32) {
++    return (pStats && DELTA32(nowTsMsU32, pStats->timestamp) <= minDeltaMsU32);
+ }
+-static bool s_checkAirStatsTooRecent(wld_airStats_t* pStats) {
++static bool s_checkAirStatsTooRecent(wld_airStats_t* pStats, uint32_t minDeltaMsU32) {
+     swl_timeSpecMono_t nowTs;
+     swl_timespec_getMono(&nowTs);
+     uint32_t nowTsMsU32 = swl_timespec_toMs(&nowTs);
+-    return s_checkAirStatsTooRecentMs(pStats, nowTsMsU32);
++    return s_checkAirStatsTooRecentMs(pStats, nowTsMsU32, minDeltaMsU32);
+ }
+ swl_rc_ne wld_rad_nl80211_getAirStatsFromSurveyInfo(T_Radio* pRadio, wld_airStats_t* pStats, wld_nl80211_channelSurveyInfo_t* pChanSurveyInfo) {
+     ASSERT_NOT_NULL(pRadio, SWL_RC_INVALID_PARAM, ME, "NULL");
+@@ -364,7 +363,7 @@ swl_rc_ne wld_rad_nl80211_getAirStatsFromSurveyInfo(T_Radio* pRadio, wld_airStat
+             SAH_TRACEZ_ERROR(ME, "%s: fail to alloc air stats cache", pRadio->Name);
+             return SWL_RC_ERROR;
+         }
+-    } else if(s_checkAirStatsTooRecentMs(pRadio->pLastAirStats, nowTsMsU32)) {
++    } else if(s_checkAirStatsTooRecentMs(pRadio->pLastAirStats, nowTsMsU32, pRadio->onReadStatsCtx.minRefreshPeriodMs)) {
+         SAH_TRACEZ_INFO(ME, "%s: too frequent polling: return cached air stats", pRadio->Name);
+         memcpy(pStats, pRadio->pLastAirStats, sizeof(*pStats));
+         return SWL_RC_OK;
+@@ -435,7 +434,7 @@ swl_rc_ne wld_rad_nl80211_getAirstats(T_Radio* pRadio, wld_airStats_t* pStats) {
+     ASSERT_NOT_NULL(pRadio, SWL_RC_INVALID_PARAM, ME, "NULL");
+     ASSERT_NOT_NULL(pStats, SWL_RC_INVALID_PARAM, ME, "NULL");
+ 
+-    if(s_checkAirStatsTooRecent(pRadio->pLastAirStats)) {
++    if(s_checkAirStatsTooRecent(pRadio->pLastAirStats, pRadio->onReadStatsCtx.minRefreshPeriodMs)) {
+         SAH_TRACEZ_INFO(ME, "%s: too recent measurement: return cached air stats", pRadio->Name);
+         memcpy(pStats, pRadio->pLastAirStats, sizeof(*pStats));
+         return SWL_RC_OK;
+diff --git a/src/wld.c b/src/wld.c
+index 2df936f39323..12aeff2d1fab 100644
+--- a/src/wld.c
++++ b/src/wld.c
+@@ -420,6 +420,7 @@ T_Radio* wld_createRadio(const char* name, vendor_t* vendor, int idx) {
+     pR->nrActiveAntenna[COM_DIR_TRANSMIT] = -1;
+     pR->nrActiveAntenna[COM_DIR_RECEIVE] = -1;
+     pR->changeInfo.lastDisableTime = swl_time_getMonoSec();
++    pR->onReadStatsCtx.minRefreshPeriodMs = wld_config_getMinStatsRefreshPeriodMs();
+ 
+     SAH_TRACEZ_WARNING(ME, "Creating new Radio context [%s, %s]", pR->Name, pR->instanceName);
+ 
+diff --git a/src/wld_apMld.c b/src/wld_apMld.c
+index f2809f6df3de..1865829ad909 100644
+--- a/src/wld_apMld.c
++++ b/src/wld_apMld.c
+@@ -245,6 +245,44 @@ bool wld_apMld_hasSharedConnectionConf(T_AccessPoint* pAP) {
+     return false;
+ }
+ 
++/**
++ * @brief local handler to fill affiliated AP stats param values
++ */
++static swl_rc_ne s_setAffAPStatsParams(amxd_param_t* param, const char* paramName, amxc_var_t* newVal, void* userData) {
++    ASSERTS_NOT_NULL(param, SWL_RC_INVALID_PARAM, ME, "NULL param");
++    ASSERTS_NOT_NULL(newVal, SWL_RC_INVALID_PARAM, ME, "NULL value");
++    wld_mloStats_t* stats = (wld_mloStats_t*) userData;
++    ASSERTS_NOT_NULL(stats, SWL_RC_INVALID_PARAM, ME, "NULL context");
++    ASSERTS_STR(paramName, SWL_RC_INVALID_PARAM, ME, "empty name");
++
++    int ret = -1;
++    if(swl_str_matches(paramName, "PacketsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->txPackets);
++    } else if(swl_str_matches(paramName, "PacketsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->rxPackets);
++    } else if(swl_str_matches(paramName, "UnicastBytesSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->txUbyte);
++    } else if(swl_str_matches(paramName, "UnicastBytesReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->rxUbyte);
++    } else if(swl_str_matches(paramName, "ErrorsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->txEbyte);
++    } else if(swl_str_matches(paramName, "MulticastBytesSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->txMbyte);
++    } else if(swl_str_matches(paramName, "MulticastBytesReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->rxMbyte);
++    } else if(swl_str_matches(paramName, "BroadcastBytesSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->txBbyte);
++    } else if(swl_str_matches(paramName, "BroadcastBytesReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->rxBbyte);
++    } else {
++        return SWL_RC_CONTINUE;
++    }
++    if(ret < 0) {
++        return SWL_RC_ERROR;
++    }
++    return SWL_RC_OK;
++}
++
+ /**
+  * @brief Update AffiliatedAP MLO statistics parameters in the Data Model.
+  *
+@@ -255,15 +293,7 @@ bool wld_apMld_hasSharedConnectionConf(T_AccessPoint* pAP) {
+  * @param stats Pointer to the collected MLO statistics structure.
+  */
+ static void s_update_affAP_MloStats(amxd_object_t* const obj, wld_mloStats_t* stats) {
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "PacketsSent", stats->txPackets);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "PacketsReceived", stats->rxPackets);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "UnicastBytesSent", stats->txUbyte);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "UnicastBytesReceived", stats->rxUbyte);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "ErrorsSent", stats->txEbyte);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "MulticastBytesSent", stats->txMbyte);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "MulticastBytesReceived", stats->rxMbyte);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "BroadcastBytesSent", stats->txBbyte);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "BroadcastBytesReceived", stats->rxBbyte);
++    wld_util_setObjStatsParams(obj, stats, s_setAffAPStatsParams);
+ }
+ 
+ /**
+diff --git a/src/wld_assocdev.c b/src/wld_assocdev.c
+index 36002b865fc7..3412965f205b 100644
+--- a/src/wld_assocdev.c
++++ b/src/wld_assocdev.c
+@@ -557,6 +557,8 @@ T_AssociatedDevice* wld_ad_create_associatedDevice(T_AccessPoint* pAP, swl_macBi
+ 
+     pAD->operatingStandardSetByDriver = true; // by default we assume the driver will set the operating standard
+ 
++    pAD->onActionReadCtx.minRefreshPeriodMs = wld_config_getMinStatsRefreshPeriodMs();
++
+     s_sendChangeEvent(pAP, pAD, WLD_AD_CHANGE_EVENT_CREATE, NULL);
+ 
+     return pAD;
+@@ -1063,9 +1065,13 @@ amxd_status_t _wld_assocDev_getStats_orf(amxd_object_t* const object,
+                                          const amxc_var_t* const args,
+                                          amxc_var_t* const action_retval,
+                                          void* priv) {
++    if((reason != action_object_read) && (reason != action_param_read)) {
++        return amxd_status_function_not_implemented;
++    }
+     ASSERT_NOT_NULL(object, amxd_status_ok, ME, "obj is NULL");
+     T_AssociatedDevice* pAD = wld_ad_fromObj(object);
+     ASSERTI_NOT_NULL(pAD, amxd_status_ok, ME, "pAD is NULL, no device present");
++    pAD->onActionReadCtx.minRefreshPeriodMs = wld_config_getMinStatsRefreshPeriodMs();
+     return swla_dm_procObjActionRead(object, param, reason, args, action_retval, priv, &pAD->onActionReadCtx, s_getSingleStationStats);
+ }
+ 
+@@ -2077,78 +2083,171 @@ swl_rc_ne wld_ad_syncInfo(T_AssociatedDevice* pAD) {
+     return SWL_RC_OK;
+ }
+ 
++/**
++ * @brief local handler to fill associated device stats param values
++ */
++static swl_rc_ne s_setAssocDevStatsParams(amxd_param_t* param, const char* paramName, amxc_var_t* newVal, void* userData) {
++    ASSERTS_NOT_NULL(param, SWL_RC_INVALID_PARAM, ME, "NULL param");
++    ASSERTS_NOT_NULL(newVal, SWL_RC_INVALID_PARAM, ME, "NULL value");
++    T_AssociatedDevice* pAD = (T_AssociatedDevice*) userData;
++    ASSERTS_NOT_NULL(pAD, SWL_RC_INVALID_PARAM, ME, "NULL context");
++    ASSERTS_STR(paramName, SWL_RC_INVALID_PARAM, ME, "empty name");
++
++    int ret = -1;
++    char TBuf[64] = {'\0'};
++    if(swl_str_matches(paramName, "ConnectionDuration")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->connectionDuration);
++    } else if(swl_str_matches(paramName, "Inactive")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->Inactive);
++    } else if(swl_str_matches(paramName, "LastDataDownlinkRate")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->LastDataDownlinkRate);
++    } else if(swl_str_matches(paramName, "LastDataUplinkRate")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->LastDataUplinkRate);
++    } else if(swl_str_matches(paramName, "MaxDownlinkRateReached")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->MaxDownlinkRateReached);
++    } else if(swl_str_matches(paramName, "MaxUplinkRateReached")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->MaxUplinkRateReached);
++    } else if(swl_str_matches(paramName, "UplinkRateSpec")) {
++        ret = amxc_var_set_cstring_t(newVal, swl_typeMcs_toBuf32Ref(&pAD->upLinkRateSpec).buf);
++    } else if(swl_str_matches(paramName, "DownlinkRateSpec")) {
++        ret = amxc_var_set_cstring_t(newVal, swl_typeMcs_toBuf32Ref(&pAD->downLinkRateSpec).buf);
++    } else if(swl_str_matches(paramName, "UplinkMCS")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->UplinkMCS);
++    } else if(swl_str_matches(paramName, "UplinkBandwidth")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->UplinkBandwidth);
++    } else if(swl_str_matches(paramName, "UplinkShortGuard")) {
++        ret = amxc_var_set_bool(newVal, pAD->UplinkShortGuard);
++    } else if(swl_str_matches(paramName, "DownlinkMCS")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->DownlinkMCS);
++    } else if(swl_str_matches(paramName, "DownlinkBandwidth")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->DownlinkBandwidth);
++    } else if(swl_str_matches(paramName, "DownlinkShortGuard")) {
++        ret = amxc_var_set_bool(newVal, pAD->DownlinkShortGuard);
++    } else if(swl_str_matches(paramName, "SignalStrength")) {
++        ret = amxc_var_set_int32_t(newVal, pAD->SignalStrength);
++    } else if(swl_str_matches(paramName, "AvgSignalStrength")) {
++        ret = amxc_var_set_int32_t(newVal, WLD_ACC_TO_VAL(pAD->rssiAccumulator));
++    } else if(swl_str_matches(paramName, "AvgSignalStrengthByChain")) {
++        ret = amxc_var_set_int32_t(newVal, pAD->AvgSignalStrengthByChain);
++    } else if(swl_str_matches(paramName, "SignalStrengthByChain")) {
++        wld_ad_printDbmDoubleArray(TBuf, sizeof(TBuf), pAD->SignalStrengthByChain, MAX_NR_ANTENNA);
++        ret = amxc_var_set_cstring_t(newVal, TBuf);
++    } else if(swl_str_matches(paramName, "NoiseByChain")) {
++        wld_ad_printDbmDoubleArray(TBuf, sizeof(TBuf), pAD->noiseByChain, MAX_NR_ANTENNA);
++        ret = amxc_var_set_cstring_t(newVal, TBuf);
++    } else if(swl_str_matches(paramName, "SignalStrengthHistory")) {
++        wld_ad_printSignalStrengthHistory(pAD, TBuf, sizeof(TBuf));
++        ret = amxc_var_set_cstring_t(newVal, TBuf);
++    } else if(swl_str_matches(paramName, "Noise")) {
++        ret = amxc_var_set_int32_t(newVal, pAD->noise);
++    } else if(swl_str_matches(paramName, "SignalNoiseRatio")) {
++        ret = amxc_var_set_int32_t(newVal, pAD->SignalNoiseRatio);
++    } else if(swl_str_matches(paramName, "PowerSave")) {
++        ret = amxc_var_set_bool(newVal, pAD->powerSave);
++    } else if(swl_str_matches(paramName, "Retransmissions")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->Retransmissions);
++    } else if(swl_str_matches(paramName, "Rx_Retransmissions")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->Rx_Retransmissions);
++    } else if(swl_str_matches(paramName, "Rx_RetransmissionsFailed")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->Rx_RetransmissionsFailed);
++    } else if(swl_str_matches(paramName, "Tx_Retransmissions")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->Tx_Retransmissions);
++    } else if(swl_str_matches(paramName, "Tx_RetransmissionsFailed")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->Tx_RetransmissionsFailed);
++    } else if(swl_str_matches(paramName, "RetryCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->retryCount);
++    } else if(swl_str_matches(paramName, "MultipleRetryCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->multipleRetryCount);
++    } else if(swl_str_matches(paramName, "RxPacketCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->RxPacketCount);
++    } else if(swl_str_matches(paramName, "TxPacketCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->TxPacketCount);
++    } else if(swl_str_matches(paramName, "RxUnicastPacketCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->RxUnicastPacketCount);
++    } else if(swl_str_matches(paramName, "TxUnicastPacketCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->TxUnicastPacketCount);
++    } else if(swl_str_matches(paramName, "RxMulticastPacketCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->RxMulticastPacketCount);
++    } else if(swl_str_matches(paramName, "TxMulticastPacketCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->TxMulticastPacketCount);
++    } else if(swl_str_matches(paramName, "TxBytes")) {
++        ret = amxc_var_set_uint64_t(newVal, pAD->TxBytes);
++    } else if(swl_str_matches(paramName, "RxBytes")) {
++        ret = amxc_var_set_uint64_t(newVal, pAD->RxBytes);
++    } else if(swl_str_matches(paramName, "TxErrors")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->TxFailures);
++    } else if(swl_str_matches(paramName, "RxErrors")) {
++        ret = amxc_var_set_uint64_t(newVal, pAD->RxFailures);
++    } else if(swl_str_matches(paramName, "MUMimoTxPktsCount")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->staMuMimoInfo.txAsMuPktsCnt);
++    } else if(swl_str_matches(paramName, "MUMimoTxPktsPercentage")) {
++        ret = amxc_var_set_uint32_t(newVal, pAD->staMuMimoInfo.txAsMuPktsPrc);
++    } else {
++        return SWL_RC_CONTINUE;
++    }
++    if(ret < 0) {
++        return SWL_RC_ERROR;
++    }
++    return SWL_RC_OK;
++}
++
++/**
++ * @brief local handler to fill affiliated Station stats param values
++ */
++static swl_rc_ne s_setAffStaStatsParams(amxd_param_t* param, const char* paramName, amxc_var_t* newVal, void* userData) {
++    ASSERTS_NOT_NULL(param, SWL_RC_INVALID_PARAM, ME, "NULL param");
++    ASSERTS_NOT_NULL(newVal, SWL_RC_INVALID_PARAM, ME, "NULL value");
++    wld_affiliatedSta_t* affiliatedSta = (wld_affiliatedSta_t*) userData;
++    ASSERTS_NOT_NULL(affiliatedSta, SWL_RC_INVALID_PARAM, ME, "NULL context");
++    ASSERTS_STR(paramName, SWL_RC_INVALID_PARAM, ME, "empty name");
++
++    int ret = -1;
++    if(swl_str_matches(paramName, "BytesSent")) {
++        ret = amxc_var_set_uint64_t(newVal, affiliatedSta->bytesSent);
++    } else if(swl_str_matches(paramName, "BytesReceived")) {
++        ret = amxc_var_set_uint64_t(newVal, affiliatedSta->bytesReceived);
++    } else if(swl_str_matches(paramName, "PacketsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, affiliatedSta->packetsSent);
++    } else if(swl_str_matches(paramName, "PacketsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, affiliatedSta->packetsReceived);
++    } else if(swl_str_matches(paramName, "ErrorsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, affiliatedSta->errorsSent);
++    } else if(swl_str_matches(paramName, "ErrorsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, affiliatedSta->errorsReceived);
++    } else if(swl_str_matches(paramName, "SignalStrength")) {
++        ret = amxc_var_set_int32_t(newVal, affiliatedSta->signalStrength);
++    } else if(swl_str_matches(paramName, "LastDataDownlinkRate")) {
++        ret = amxc_var_set_uint32_t(newVal, affiliatedSta->lastDataDownlinkRate);
++    } else if(swl_str_matches(paramName, "LastDataUplinkRate")) {
++        ret = amxc_var_set_uint32_t(newVal, affiliatedSta->lastDataUplinkRate);
++    } else if(swl_str_matches(paramName, "UplinkRateSpec")) {
++        ret = amxc_var_set_cstring_t(newVal, swl_typeMcs_toBuf32Ref(&affiliatedSta->upLinkRateSpec).buf);
++    } else if(swl_str_matches(paramName, "DownlinkRateSpec")) {
++        ret = amxc_var_set_cstring_t(newVal, swl_typeMcs_toBuf32Ref(&affiliatedSta->downLinkRateSpec).buf);
++    } else {
++        return SWL_RC_CONTINUE;
++    }
++    if(ret < 0) {
++        return SWL_RC_ERROR;
++    }
++    return SWL_RC_OK;
++}
++
+ void wld_ad_syncStats(T_AssociatedDevice* pAD) {
+     ASSERT_NOT_NULL(pAD, , ME, "NULL");
+     amxd_object_t* object = pAD->object;
+     ASSERT_NOT_NULL(object, , ME, "NULL");
+ 
+     // Update here volatile parameters
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "ConnectionDuration", pAD->connectionDuration);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "Inactive", pAD->Inactive);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "LastDataDownlinkRate", pAD->LastDataDownlinkRate);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "LastDataUplinkRate", pAD->LastDataUplinkRate);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "MaxDownlinkRateReached", pAD->MaxDownlinkRateReached);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "MaxUplinkRateReached", pAD->MaxUplinkRateReached);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "UplinkMCS", pAD->UplinkMCS);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "UplinkBandwidth", pAD->UplinkBandwidth);
+-    SWLA_OBJECT_SET_PARAM_BOOL(object, "UplinkShortGuard", pAD->UplinkShortGuard);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "DownlinkMCS", pAD->DownlinkMCS);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "DownlinkBandwidth", pAD->DownlinkBandwidth);
+-    SWLA_OBJECT_SET_PARAM_BOOL(object, "DownlinkShortGuard", pAD->DownlinkShortGuard);
+-
+-    SWLA_OBJECT_SET_PARAM_INT32(object, "SignalStrength", pAD->SignalStrength);
+-    SWLA_OBJECT_SET_PARAM_INT32(object, "AvgSignalStrength", WLD_ACC_TO_VAL(pAD->rssiAccumulator));
+-    SWLA_OBJECT_SET_PARAM_INT32(object, "AvgSignalStrengthByChain", pAD->AvgSignalStrengthByChain);
+-    char TBuf[64] = {'\0'};
+-    wld_ad_printDbmDoubleArray(TBuf, sizeof(TBuf), pAD->SignalStrengthByChain, MAX_NR_ANTENNA);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(object, "SignalStrengthByChain", TBuf);
+-    wld_ad_printDbmDoubleArray(TBuf, sizeof(TBuf), pAD->noiseByChain, MAX_NR_ANTENNA);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(object, "NoiseByChain", TBuf);
+-    char rssiHistory[64] = {'\0'};
+-    wld_ad_printSignalStrengthHistory(pAD, rssiHistory, sizeof(rssiHistory));
+-    SWLA_OBJECT_SET_PARAM_CSTRING(object, "SignalStrengthHistory", rssiHistory);
+-    SWLA_OBJECT_SET_PARAM_INT32(object, "Noise", pAD->noise);
+-    SWLA_OBJECT_SET_PARAM_INT32(object, "SignalNoiseRatio", pAD->SignalNoiseRatio);
+-    SWLA_OBJECT_SET_PARAM_BOOL(object, "PowerSave", pAD->powerSave);
+-
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "Retransmissions", pAD->Retransmissions);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "Rx_Retransmissions", pAD->Rx_Retransmissions);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "Rx_RetransmissionsFailed", pAD->Rx_RetransmissionsFailed);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "Tx_Retransmissions", pAD->Tx_Retransmissions);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "Tx_RetransmissionsFailed", pAD->Tx_RetransmissionsFailed);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "RetryCount", pAD->retryCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "MultipleRetryCount", pAD->multipleRetryCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "RxPacketCount", pAD->RxPacketCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "TxPacketCount", pAD->TxPacketCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "RxUnicastPacketCount", pAD->RxUnicastPacketCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "TxUnicastPacketCount", pAD->TxUnicastPacketCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "RxMulticastPacketCount", pAD->RxMulticastPacketCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "TxMulticastPacketCount", pAD->TxMulticastPacketCount);
+-    SWLA_OBJECT_SET_PARAM_UINT64(object, "TxBytes", pAD->TxBytes);
+-    SWLA_OBJECT_SET_PARAM_UINT64(object, "RxBytes", pAD->RxBytes);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "TxErrors", pAD->TxFailures);
+-    SWLA_OBJECT_SET_PARAM_UINT64(object, "RxErrors", pAD->RxFailures);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "MUMimoTxPktsCount", pAD->staMuMimoInfo.txAsMuPktsCnt);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "MUMimoTxPktsPercentage", pAD->staMuMimoInfo.txAsMuPktsPrc);
++    wld_util_setObjStatsParams(object, pAD, s_setAssocDevStatsParams);
+ 
+     amxc_llist_for_each(it, &pAD->affiliatedStaList) {
+         wld_affiliatedSta_t* affiliatedSta = amxc_llist_it_get_data(it, wld_affiliatedSta_t, it);
+         if(affiliatedSta->object == NULL) {
+             continue;
+         }
+-        SWLA_OBJECT_SET_PARAM_UINT64(affiliatedSta->object, "BytesSent", affiliatedSta->bytesSent);
+-        SWLA_OBJECT_SET_PARAM_UINT64(affiliatedSta->object, "BytesReceived", affiliatedSta->bytesReceived);
+-        SWLA_OBJECT_SET_PARAM_UINT32(affiliatedSta->object, "PacketsSent", affiliatedSta->packetsSent);
+-        SWLA_OBJECT_SET_PARAM_UINT32(affiliatedSta->object, "PacketsReceived", affiliatedSta->packetsReceived);
+-        SWLA_OBJECT_SET_PARAM_UINT32(affiliatedSta->object, "ErrorsSent", affiliatedSta->errorsSent);
+-        SWLA_OBJECT_SET_PARAM_UINT32(affiliatedSta->object, "ErrorsReceived", affiliatedSta->errorsReceived);
+-        SWLA_OBJECT_SET_PARAM_INT32(affiliatedSta->object, "SignalStrength", affiliatedSta->signalStrength);
+-        SWLA_OBJECT_SET_PARAM_UINT32(affiliatedSta->object, "LastDataDownlinkRate", affiliatedSta->lastDataDownlinkRate);
+-        SWLA_OBJECT_SET_PARAM_UINT32(affiliatedSta->object, "LastDataUplinkRate", affiliatedSta->lastDataUplinkRate);
+-
+-
++        wld_util_setObjStatsParams(affiliatedSta->object, affiliatedSta, s_setAffStaStatsParams);
+     }
+-
+ }
+ 
+ int32_t wld_ad_getAvgSignalStrengthByChain(T_AssociatedDevice* pAD) {
+diff --git a/src/wld_endpoint.c b/src/wld_endpoint.c
+index a8f06cc43b2b..8ae0d7772599 100644
+--- a/src/wld_endpoint.c
++++ b/src/wld_endpoint.c
+@@ -420,66 +420,130 @@ static void s_getOUIValue(amxc_string_t* output, swl_oui_list_t* vendorOui) {
+     amxc_string_set(output, buffer);
+ }
+ 
++/**
++ * @brief local handler to fill endpoint volatile stats param values
++ */
++static swl_rc_ne s_setEndpointCapsParams(amxd_param_t* param, const char* paramName, amxc_var_t* newVal, void* userData) {
++    ASSERTS_NOT_NULL(param, SWL_RC_INVALID_PARAM, ME, "NULL param");
++    ASSERTS_NOT_NULL(newVal, SWL_RC_INVALID_PARAM, ME, "NULL value");
++    wld_assocDev_capabilities_t* caps = (wld_assocDev_capabilities_t*) userData;
++    ASSERTS_NOT_NULL(caps, SWL_RC_INVALID_PARAM, ME, "NULL context");
++    ASSERTS_STR(paramName, SWL_RC_INVALID_PARAM, ME, "empty name");
++
++    int ret = -1;
++    char buffer[256] = {0};
++    if(swl_str_matches(paramName, "SupportedMCS")) {
++        swl_conv_uint8ArrayToChar(buffer, sizeof(buffer), caps->supportedMCS.mcs, caps->supportedMCS.mcsNbr);
++        ret = amxc_var_set_cstring_t(newVal, buffer);
++    } else if(swl_str_matches(paramName, "VendorOUI")) {
++        amxc_string_t TBufStr;
++        amxc_string_init(&TBufStr, 0);
++        s_getOUIValue(&TBufStr, &caps->vendorOUI);
++        ret = amxc_var_set_cstring_t(newVal, amxc_string_get(&TBufStr, 0));
++        amxc_string_clean(&TBufStr);
++    } else if(swl_str_matches(paramName, "SecurityModeEnabled")) {
++        ret = amxc_var_set_cstring_t(newVal, swl_security_apModeToString(caps->currentSecurity, SWL_SECURITY_APMODEFMT_LEGACY));
++    } else if(swl_str_matches(paramName, "EncryptionMode")) {
++        ret = amxc_var_set_cstring_t(newVal, cstr_AP_EncryptionMode[caps->encryptMode]);
++    } else if(swl_str_matches(paramName, "LinkBandwidth")) {
++        ret = amxc_var_set_cstring_t(newVal, swl_bandwidth_unknown_str[caps->linkBandwidth]);
++    } else if(swl_str_matches(paramName, "HtCapabilities")) {
++        swl_conv_maskToChar(buffer, sizeof(buffer), caps->htCapabilities, swl_staCapHt_str, SWL_STACAP_HT_MAX);
++        ret = amxc_var_set_cstring_t(newVal, buffer);
++    } else if(swl_str_matches(paramName, "VhtCapabilities")) {
++        swl_conv_maskToChar(buffer, sizeof(buffer), caps->vhtCapabilities, swl_staCapVht_str, SWL_STACAP_VHT_MAX);
++        ret = amxc_var_set_cstring_t(newVal, buffer);
++    } else if(swl_str_matches(paramName, "HeCapabilities")) {
++        swl_conv_maskToChar(buffer, sizeof(buffer), caps->heCapabilities, swl_staCapHe_str, SWL_STACAP_HE_MAX);
++        ret = amxc_var_set_cstring_t(newVal, buffer);
++    } else if(swl_str_matches(paramName, "EhtCapabilities")) {
++        swl_conv_maskToChar(buffer, sizeof(buffer), caps->ehtCapabilities, swl_staCapEht_str, SWL_STACAP_EHT_MAX);
++        ret = amxc_var_set_cstring_t(newVal, buffer);
++    } else if(swl_str_matches(paramName, "FrequencyCapabilities")) {
++        swl_conv_maskToChar(buffer, sizeof(buffer), caps->freqCapabilities, swl_freqBandExt_unknown_str, SWL_FREQ_BAND_EXT_MAX);
++        ret = amxc_var_set_cstring_t(newVal, buffer);
++    } else {
++        return SWL_RC_CONTINUE;
++    }
++    if(ret < 0) {
++        return SWL_RC_ERROR;
++    }
++    return SWL_RC_OK;
++}
++
++/**
++ * @brief local handler to fill endpoint volatile caps param values
++ */
++static swl_rc_ne s_setEndpointStatsParams(amxd_param_t* param, const char* paramName, amxc_var_t* newVal, void* userData) {
++    ASSERTS_NOT_NULL(param, SWL_RC_INVALID_PARAM, ME, "NULL param");
++    ASSERTS_NOT_NULL(newVal, SWL_RC_INVALID_PARAM, ME, "NULL value");
++    T_EndPointStats* stats = (T_EndPointStats*) userData;
++    ASSERTS_NOT_NULL(stats, SWL_RC_INVALID_PARAM, ME, "NULL context");
++    ASSERTS_STR(paramName, SWL_RC_INVALID_PARAM, ME, "empty name");
++
++    int ret = -1;
++    if(swl_str_matches(paramName, "LastDataDownlinkRate")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->LastDataDownlinkRate);
++    } else if(swl_str_matches(paramName, "LastDataUplinkRate")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->LastDataUplinkRate);
++    } else if(swl_str_matches(paramName, "Retransmissions")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->Retransmissions);
++    } else if(swl_str_matches(paramName, "SignalStrength")) {
++        ret = amxc_var_set_int32_t(newVal, stats->SignalStrength);
++    } else if(swl_str_matches(paramName, "SignalNoiseRatio")) {
++        ret = amxc_var_set_int32_t(newVal, stats->SignalNoiseRatio);
++    } else if(swl_str_matches(paramName, "Noise")) {
++        ret = amxc_var_set_int32_t(newVal, stats->noise);
++    } else if(swl_str_matches(paramName, "RSSI")) {
++        ret = amxc_var_set_int32_t(newVal, stats->RSSI);
++    } else if(swl_str_matches(paramName, "TxBytes")) {
++        ret = amxc_var_set_uint64_t(newVal, stats->txbyte);
++    } else if(swl_str_matches(paramName, "TxPacketCount")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->txPackets);
++    } else if(swl_str_matches(paramName, "Tx_Retransmissions")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->txRetries);
++    } else if(swl_str_matches(paramName, "RxBytes")) {
++        ret = amxc_var_set_uint64_t(newVal, stats->rxbyte);
++    } else if(swl_str_matches(paramName, "RxPacketCount")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->rxPackets);
++    } else if(swl_str_matches(paramName, "Rx_Retransmissions")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->rxRetries);
++    } else if(swl_str_matches(paramName, "OperatingStandard")) {
++        ret = amxc_var_set_cstring_t(newVal, swl_radStd_unknown_str[stats->operatingStandard]);
++    } else if(swl_str_matches(paramName, "Rx_Retransmissions")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->rxRetries);
++    } else if(swl_str_matches(paramName, "MaxRxSpatialStreamsSupported")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->maxRxStream);
++    } else if(swl_str_matches(paramName, "MaxTxSpatialStreamsSupported")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->maxTxStream);
++    } else {
++        return SWL_RC_CONTINUE;
++    }
++    if(ret < 0) {
++        return SWL_RC_ERROR;
++    }
++    return SWL_RC_OK;
++}
++
++
+ void wld_endpoint_syncCapabilities(amxd_object_t* obj, wld_assocDev_capabilities_t* caps) {
+     ASSERT_NOT_NULL(obj, , ME, "NULL");
+     ASSERT_NOT_NULL(caps, , ME, "NULL");
+ 
+-    char mcsList[100];
+-    memset(mcsList, 0, sizeof(mcsList));
+-    swl_conv_uint8ArrayToChar(mcsList, sizeof(mcsList), caps->supportedMCS.mcs, caps->supportedMCS.mcsNbr);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "SupportedMCS", mcsList);
+-
+-    amxc_string_t TBufStr;
+-    amxc_string_init(&TBufStr, 0);
+-    s_getOUIValue(&TBufStr, &caps->vendorOUI);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "VendorOUI", amxc_string_get(&TBufStr, 0));
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "SecurityModeEnabled", swl_security_apModeToString(caps->currentSecurity, SWL_SECURITY_APMODEFMT_LEGACY));
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "EncryptionMode", cstr_AP_EncryptionMode[caps->encryptMode]);
+-
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "LinkBandwidth", swl_bandwidth_unknown_str[caps->linkBandwidth]);
+-    char buffer[256];
+-    swl_conv_maskToChar(buffer, sizeof(buffer), caps->htCapabilities, swl_staCapHt_str, SWL_STACAP_HT_MAX);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "HtCapabilities", buffer);
+-    swl_conv_maskToChar(buffer, sizeof(buffer), caps->vhtCapabilities, swl_staCapVht_str, SWL_STACAP_VHT_MAX);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "VhtCapabilities", buffer);
+-    swl_conv_maskToChar(buffer, sizeof(buffer), caps->heCapabilities, swl_staCapHe_str, SWL_STACAP_HE_MAX);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "HeCapabilities", buffer);
+-    swl_conv_maskToChar(buffer, sizeof(buffer), caps->ehtCapabilities, swl_staCapEht_str, SWL_STACAP_EHT_MAX);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "EhtCapabilities", buffer);
+-
+-    char frequencyCapabilitiesStr[128] = {0};
+-    swl_conv_maskToChar(frequencyCapabilitiesStr, sizeof(frequencyCapabilitiesStr), caps->freqCapabilities, swl_freqBandExt_unknown_str, SWL_FREQ_BAND_EXT_MAX);
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "FrequencyCapabilities", frequencyCapabilitiesStr);
+-    amxc_string_clean(&TBufStr);
++    wld_util_setObjStatsParams(obj, caps, s_setEndpointCapsParams);
+ }
+ 
+ amxd_status_t wld_endpoint_stats2Obj(amxd_object_t* obj, T_EndPointStats* stats) {
+     ASSERT_NOT_NULL(obj, amxd_status_unknown_error, ME, "NULL");
+     ASSERT_NOT_NULL(stats, amxd_status_unknown_error, ME, "NULL");
+ 
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "LastDataDownlinkRate", stats->LastDataDownlinkRate);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "LastDataUplinkRate", stats->LastDataUplinkRate);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "Retransmissions", stats->Retransmissions);
+-    SWLA_OBJECT_SET_PARAM_INT32(obj, "SignalStrength", stats->SignalStrength);
+-    SWLA_OBJECT_SET_PARAM_INT32(obj, "SignalNoiseRatio", stats->SignalNoiseRatio);
+-    SWLA_OBJECT_SET_PARAM_INT32(obj, "Noise", stats->noise);
+-    SWLA_OBJECT_SET_PARAM_INT32(obj, "RSSI", stats->RSSI);
+-    SWLA_OBJECT_SET_PARAM_UINT64(obj, "TxBytes", stats->txbyte);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "TxPacketCount", stats->txPackets);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "Tx_Retransmissions", stats->txRetries);
+-    SWLA_OBJECT_SET_PARAM_UINT64(obj, "RxBytes", stats->rxbyte);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "RxPacketCount", stats->rxPackets);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "Rx_Retransmissions", stats->rxRetries);
+-
+-    SWLA_OBJECT_SET_PARAM_CSTRING(obj, "OperatingStandard", swl_radStd_unknown_str[stats->operatingStandard]);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "MaxRxSpatialStreamsSupported", stats->maxRxStream);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "MaxTxSpatialStreamsSupported", stats->maxTxStream);
++    wld_util_setObjStatsParams(obj, stats, s_setEndpointStatsParams);
+ 
+     wld_endpoint_syncCapabilities(obj, &stats->assocCaps);
+ 
+-
+     return amxd_status_ok;
+ }
++
+ void wld_endpoint_resetStats(T_EndPoint* pEP) {
+     ASSERTS_NOT_NULL(pEP, , ME, "NULL");
+     SAH_TRACEZ_INFO(ME, "%s: reset Endpoint Stats", pEP->alias);
+@@ -517,10 +581,7 @@ amxd_status_t _wld_endpoint_getStats_orf(amxd_object_t* const object,
+     ASSERTI_NOT_NULL(pEP, amxd_status_ok, ME, "EndPoint not present");
+ 
+ 
+-    if(!pEP || !debugIsEpPointer(pEP)) {
+-        SAH_TRACEZ_INFO(ME, "EndPoint not present !");
+-        return amxd_status_unknown_error;
+-    }
++    pEP->onActionReadCtx.minRefreshPeriodMs = wld_config_getMinStatsRefreshPeriodMs();
+ 
+     status = swla_dm_procObjActionRead(object, param, reason, args, action_retval, priv, &pEP->onActionReadCtx, s_getEndpointStats);
+     return status;
+@@ -664,6 +725,8 @@ static void s_setDefaults(T_EndPoint* pEP, const char* endpointname) {
+     pEP->multiAPProfile = MULTIAP_NOT_SUPPORTED;
+     pEP->peerMultiAPProfile = MULTIAP_NOT_SUPPORTED;
+     pEP->multiAPVlanId = 0;
++
++    pEP->onActionReadCtx.minRefreshPeriodMs = wld_config_getMinStatsRefreshPeriodMs();
+ }
+ 
+ static void s_sendChangeEvent(T_EndPoint* pEP, wld_ep_changeEvent_e changeType, void* data) {
+diff --git a/src/wld_radio.c b/src/wld_radio.c
+index 44c2078f8e40..710430b8b15d 100644
+--- a/src/wld_radio.c
++++ b/src/wld_radio.c
+@@ -853,8 +853,12 @@ amxd_status_t _wld_radio_getStats_orf(amxd_object_t* const object,
+                                       const amxc_var_t* const args,
+                                       amxc_var_t* const action_retval,
+                                       void* priv) {
++    if((reason != action_object_read) && (reason != action_param_read)) {
++        return amxd_status_function_not_implemented;
++    }
+     T_Radio* pR = wld_rad_fromObj(amxd_object_get_parent(object));
+-    ASSERT_NOT_NULL(pR, amxd_status_unknown_error, ME, "No mapped radio");
++    ASSERT_NOT_NULL(pR, amxd_status_ok, ME, "No mapped radio");
++    pR->onReadStatsCtx.minRefreshPeriodMs = wld_config_getMinStatsRefreshPeriodMs();
+     return swla_dm_procObjActionRead(object, param, reason, args, action_retval, priv, &pR->onReadStatsCtx, s_updateRadioStatsValues);
+ }
+ 
+diff --git a/src/wld_ssid.c b/src/wld_ssid.c
+index 273273c09168..bfdf03328596 100644
+--- a/src/wld_ssid.c
++++ b/src/wld_ssid.c
+@@ -1068,6 +1068,22 @@ amxd_status_t _SSID_getSSIDStats(amxd_object_t* object,
+     return amxd_status_ok;
+ }
+ 
++/**
++ * @brief retrieve ssid stats and update dm
++ *
++ * @param statsObj object to be updated
++ *
++ * @return SWL_RC_OK when dm is updated
++ *         SWL_RC_DONE when no stats have changed
++ *         error code otherwise
++ */
++static swl_rc_ne s_getSsidStats(amxd_object_t* statsObj) {
++    T_SSID* pSSID = wld_ssid_fromObj(amxd_object_get_parent(statsObj));
++    ASSERT_NOT_NULL(pSSID, SWL_RC_INVALID_PARAM, ME, "no SSID ctx");
++    amxd_status_t status = s_updateSsidStatsValues(pSSID, statsObj);
++    return (status == amxd_status_ok) ? SWL_RC_OK : SWL_RC_DONE;
++}
++
+ amxd_status_t _wld_ssid_getStats_orf(amxd_object_t* const object,
+                                      amxd_param_t* const param,
+                                      amxd_action_t reason,
+@@ -1077,21 +1093,17 @@ amxd_status_t _wld_ssid_getStats_orf(amxd_object_t* const object,
+     SAH_TRACEZ_IN(ME);
+ 
+     amxd_status_t status = amxd_status_ok;
+-    if(reason != action_object_read) {
++    if((reason != action_object_read) && (reason != action_param_read)) {
+         status = amxd_status_function_not_implemented;
+         return status;
+     }
+ 
+-    T_SSID* pSSID = (T_SSID*) amxd_object_get_parent(object)->priv;
++    T_SSID* pSSID = wld_ssid_fromObj(amxd_object_get_parent(object));
+ 
+-    if(!pSSID || !debugIsSsidPointer(pSSID)) {
+-        SAH_TRACEZ_INFO(ME, "SSID not present !");
+-        return amxd_status_unknown_error;
+-    }
++    ASSERT_NOT_NULL(pSSID, amxd_status_ok, ME, "no SSID ctx");
+ 
+-    s_updateSsidStatsValues(pSSID, object);
+-
+-    status = amxd_action_object_read(object, param, reason, args, action_retval, priv);
++    pSSID->onReadStatsCtx.minRefreshPeriodMs = wld_config_getMinStatsRefreshPeriodMs();
++    status = swla_dm_procObjActionRead(object, param, reason, args, action_retval, priv, &pSSID->onReadStatsCtx, s_getSsidStats);
+     return status;
+ }
+ 
+diff --git a/src/wld_util.c b/src/wld_util.c
+index 3fc87767e9f3..eae59cc6accb 100644
+--- a/src/wld_util.c
++++ b/src/wld_util.c
+@@ -2238,41 +2238,108 @@ bool wldu_key_matches(const char* ssid, const char* oldKeyPassPhrase, const char
+     SAH_TRACEZ_INFO(ME, "Keys are identical");
+     return true;
+ }
++/**
++ * @brief local handler to fill wmm stats param values
++ */
++static swl_rc_ne s_setWmmStatsParams(amxd_param_t* param, const char* paramName, amxc_var_t* newVal, void* userData) {
++    ASSERTS_NOT_NULL(param, SWL_RC_INVALID_PARAM, ME, "NULL param");
++    ASSERTS_NOT_NULL(newVal, SWL_RC_INVALID_PARAM, ME, "NULL value");
++    uint32_t* stats = (uint32_t*) userData;
++    ASSERTS_NOT_NULL(stats, SWL_RC_INVALID_PARAM, ME, "NULL context");
++    ASSERTS_STR(paramName, SWL_RC_INVALID_PARAM, ME, "empty name");
++
++    int ret = -1;
++    if(swl_str_matches(paramName, "AC_BE")) {
++        ret = amxc_var_set_uint32_t(newVal, stats[WLD_AC_BE]);
++    } else if(swl_str_matches(paramName, "AC_BK")) {
++        ret = amxc_var_set_uint32_t(newVal, stats[WLD_AC_BK]);
++    } else if(swl_str_matches(paramName, "AC_VO")) {
++        ret = amxc_var_set_uint32_t(newVal, stats[WLD_AC_VO]);
++    } else if(swl_str_matches(paramName, "AC_VI")) {
++        ret = amxc_var_set_uint32_t(newVal, stats[WLD_AC_VI]);
++    } else {
++        return SWL_RC_CONTINUE;
++    }
++    if(ret < 0) {
++        return SWL_RC_ERROR;
++    }
++    return SWL_RC_OK;
++}
++
++/**
++ * @brief local handler to fill wl iface stats param values
++ */
++static swl_rc_ne s_setWlIfaceStatsParams(amxd_param_t* param, const char* paramName, amxc_var_t* newVal, void* userData) {
++    ASSERTS_NOT_NULL(param, SWL_RC_INVALID_PARAM, ME, "NULL param");
++    ASSERTS_NOT_NULL(newVal, SWL_RC_INVALID_PARAM, ME, "NULL value");
++    T_Stats* stats = (T_Stats*) userData;
++    ASSERTS_NOT_NULL(stats, SWL_RC_INVALID_PARAM, ME, "NULL context");
++    ASSERTS_STR(paramName, SWL_RC_INVALID_PARAM, ME, "empty name");
++
++    int ret = -1;
++    if(swl_str_matches(paramName, "BytesSent")) {
++        ret = amxc_var_set_uint64_t(newVal, stats->BytesSent);
++    } else if(swl_str_matches(paramName, "BytesReceived")) {
++        ret = amxc_var_set_uint64_t(newVal, stats->BytesReceived);
++    } else if(swl_str_matches(paramName, "PacketsSent")) {
++        ret = amxc_var_set_uint64_t(newVal, stats->PacketsSent);
++    } else if(swl_str_matches(paramName, "PacketsReceived")) {
++        ret = amxc_var_set_uint64_t(newVal, stats->PacketsReceived);
++    } else if(swl_str_matches(paramName, "ErrorsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->ErrorsSent);
++    } else if(swl_str_matches(paramName, "RetransCount")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->RetransCount);
++    } else if(swl_str_matches(paramName, "ErrorsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->ErrorsReceived);
++    } else if(swl_str_matches(paramName, "DiscardPacketsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->DiscardPacketsSent);
++    } else if(swl_str_matches(paramName, "DiscardPacketsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->DiscardPacketsReceived);
++    } else if(swl_str_matches(paramName, "UnicastPacketsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->UnicastPacketsSent);
++    } else if(swl_str_matches(paramName, "UnicastPacketsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->UnicastPacketsReceived);
++    } else if(swl_str_matches(paramName, "MulticastPacketsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->MulticastPacketsSent);
++    } else if(swl_str_matches(paramName, "MulticastPacketsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->MulticastPacketsReceived);
++    } else if(swl_str_matches(paramName, "BroadcastPacketsSent")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->BroadcastPacketsSent);
++    } else if(swl_str_matches(paramName, "BroadcastPacketsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->BroadcastPacketsReceived);
++    } else if(swl_str_matches(paramName, "UnknownProtoPacketsReceived")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->UnknownProtoPacketsReceived);
++    } else if(swl_str_matches(paramName, "FailedRetransCount")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->FailedRetransCount);
++    } else if(swl_str_matches(paramName, "RetryCount")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->RetryCount);
++    } else if(swl_str_matches(paramName, "MultipleRetryCount")) {
++        ret = amxc_var_set_uint32_t(newVal, stats->MultipleRetryCount);
++    } else if(swl_str_matches(paramName, "Temperature")) {
++        ret = amxc_var_set_int32_t(newVal, stats->TemperatureDegreesCelsius);
++    } else if(swl_str_matches(paramName, "Noise")) {
++        ret = amxc_var_set_int32_t(newVal, stats->noise);
++    } else {
++        return SWL_RC_CONTINUE;
++    }
++    if(ret < 0) {
++        return SWL_RC_ERROR;
++    }
++    return SWL_RC_OK;
++}
+ 
+ static void s_writeWmmStats(amxd_object_t* parentObj, const char* objectName, uint32_t* stats) {
+     amxd_object_t* object = amxd_object_get(parentObj, objectName);
+     ASSERT_NOT_NULL(object, , ME, "No object named <%s>", objectName);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "AC_BE", stats[WLD_AC_BE]);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "AC_BK", stats[WLD_AC_BK]);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "AC_VO", stats[WLD_AC_VO]);
+-    SWLA_OBJECT_SET_PARAM_UINT32(object, "AC_VI", stats[WLD_AC_VI]);
++
++    wld_util_setObjStatsParams(object, stats, s_setWmmStatsParams);
+ }
+ 
+ amxd_status_t wld_util_stats2Obj(amxd_object_t* obj, T_Stats* stats) {
+     ASSERT_NOT_NULL(obj, amxd_status_unknown_error, ME, "NULL");
+     ASSERT_NOT_NULL(stats, amxd_status_unknown_error, ME, "NULL");
+ 
+-    SWLA_OBJECT_SET_PARAM_UINT64(obj, "BytesSent", stats->BytesSent);
+-    SWLA_OBJECT_SET_PARAM_UINT64(obj, "BytesReceived", stats->BytesReceived);
+-    SWLA_OBJECT_SET_PARAM_UINT64(obj, "PacketsSent", stats->PacketsSent);
+-    SWLA_OBJECT_SET_PARAM_UINT64(obj, "PacketsReceived", stats->PacketsReceived);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "ErrorsSent", stats->ErrorsSent);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "RetransCount", stats->RetransCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "ErrorsReceived", stats->ErrorsReceived);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "DiscardPacketsSent", stats->DiscardPacketsSent);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "DiscardPacketsReceived", stats->DiscardPacketsReceived);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "UnicastPacketsSent", stats->UnicastPacketsSent);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "UnicastPacketsReceived", stats->UnicastPacketsReceived);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "MulticastPacketsSent", stats->MulticastPacketsSent);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "MulticastPacketsReceived", stats->MulticastPacketsReceived);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "BroadcastPacketsSent", stats->BroadcastPacketsSent);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "BroadcastPacketsReceived", stats->BroadcastPacketsReceived);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "UnknownProtoPacketsReceived", stats->UnknownProtoPacketsReceived);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "FailedRetransCount", stats->FailedRetransCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "RetryCount", stats->RetryCount);
+-    SWLA_OBJECT_SET_PARAM_UINT32(obj, "MultipleRetryCount", stats->MultipleRetryCount);
+-    SWLA_OBJECT_SET_PARAM_INT32(obj, "Temperature", stats->TemperatureDegreesCelsius);
+-    SWLA_OBJECT_SET_PARAM_INT32(obj, "Noise", stats->noise);
++    wld_util_setObjStatsParams(obj, stats, s_setWlIfaceStatsParams);
+ 
+     s_writeWmmStats(obj, "WmmPacketsSent", stats->WmmPacketsSent);
+     s_writeWmmStats(obj, "WmmPacketsReceived", stats->WmmPacketsReceived);
+@@ -2673,3 +2740,32 @@ swl_80211_ehtOpIE_t wld_util_buildEhtOperationIE(swl_chanspec_t chSpec, uint32_t
+     return ehtOperationIE;
+ }
+ 
++swl_rc_ne wld_util_setObjStatsParams(amxd_object_t* object, void* userData, wld_dm_objStatsParamHdlr_f paramHdlr) {
++    ASSERT_NOT_NULL(object, SWL_RC_INVALID_PARAM, ME, "NULL");
++    ASSERT_NOT_NULL(paramHdlr, SWL_RC_INVALID_PARAM, ME, "Missing handler");
++
++    amxd_param_t* param = NULL;
++    const char* paramName = NULL;
++    amxc_var_t value;
++    swl_rc_ne hdlRc = SWL_RC_ERROR;
++
++    amxd_object_for_each(parameter, it, object) {
++        param = amxc_llist_it_get_data(it, amxd_param_t, it);
++        paramName = amxd_param_get_name(param);
++        amxc_var_init(&value);
++        hdlRc = paramHdlr(param, paramName, &value, userData);
++        if((hdlRc == SWL_RC_OK) && (value.type_id != AMXC_VAR_ID_NULL)) {
++            amxd_status_t status = amxd_action_param_write(object, param, action_param_write, &value, NULL, NULL);
++            if(status != amxd_status_ok) {
++                SAH_TRACEZ_WARNING(ME, "fail to saved typed value to station stats param (%s) (status:%s)",
++                                   paramName, amxd_status_string(status));
++            }
++        } else if(hdlRc < SWL_RC_OK) {
++            SAH_TRACEZ_WARNING(ME, "fail to set typed value of (%s)", paramName);
++        }
++        amxc_var_clean(&value);
++    }
++
++    return SWL_RC_OK;
++}
++
