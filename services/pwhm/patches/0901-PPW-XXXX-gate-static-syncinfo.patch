@@ -1,0 +1,72 @@
+pwhm: only rewrite a station's static datamodel info when it changes
+
+wld (the prplMesh WiFi HAL daemon) publishes every associated station under
+WiFi.AccessPoint.{i}.AssociatedDevice.{i}. in the datamodel. On each
+getStationStats poll from the controller/agent, wld_ad_syncInfo() rewrote the
+entire static identity/capability block for that station -- MAC address,
+operating standard, supported/negotiated rates, spatial streams, bandwidth and
+MLO info, about 40 parameters -- through the ambiorix datamodel transaction
+layer (amxd_trans_apply: per-parameter key hashing, hashtable walks, variant
+build/free).
+
+That block is constant after association, but it was rewritten on every poll
+because the gate keyed on "a fresh driver stats sample arrived" instead of "the
+static info actually changed". The driver sample is refreshed every poll, so the
+costly write-back fired once per station per poll. The cost grows with the number
+of stations per radio and is independent of traffic.
+
+Rewrite the static block only when it can really change -- the first sync after
+association, or an association-state change -- and advance the "already synced"
+watermark on the skip path so the state-change trigger keeps edge-triggering. The
+genuinely time-varying fields (signal strength, last/max data rates) are already
+refreshed every poll by the cheap, transaction-free wld_ad_syncStats() path, so
+nothing user-visible goes stale.
+
+Measured on a 6-radio reference board at 114 associated stations (perf, 3x 60 s
+windows, same image before vs after):
+
+  - datamodel write-transactions committed by wld: ~98/s -> ~3.5/s
+    (from ~one per station per poll down to ~one per poll in total)
+  - wld CPU: ~44% -> ~28.5% of one core (-15.5 points, ~35% lower)
+  - in the CPU profile the static write-back path
+    (wld_ad_syncInfo -> amxd_trans_apply) drops from ~22-25% of wld CPU to ~0.5%
+
+The getStationStats call rate, every AssociatedDevice field and association/
+disassociation handling are unchanged; a newly associated station still gets its
+full static info within a poll or two, and disassociation still clears it. The
+remaining per-poll cost is the datamodel read-back that builds the RPC reply,
+addressed separately.
+
+Upstream-Status: Pending
+
+diff --git a/src/wld_assocdev.c b/src/wld_assocdev.c
+--- a/src/wld_assocdev.c
++++ b/src/wld_assocdev.c
+@@ -1926,7 +1926,15 @@
+ 
+     amxd_object_t* afStaTemplateObject = amxd_object_get(object, "AffiliatedSta");
+ 
+-    if(swl_timespec_isZero(&pAD->lastSampleTime) || (swl_timespec_diff(NULL, &pAD->lastSampleSyncTime, &pAD->lastSampleTime) != 0)
++    /* PPW-XXXX: (re)write the static identity/capability block only when it
++     * actually changes -- first sync (A) or an association-state change (C) --
++     * NOT on every driver sample. The dropped per-sample clause
++     * (lastSampleSyncTime != lastSampleTime) fired ~once/poll/station and ran
++     * the full per-station DM write-transaction even though MAC/Caps/rates are
++     * static after assoc. The genuinely-volatile fields (AvgSignalStrength,
++     * Up/DownlinkRateSpec, MaxDownlinkRateReached) are already refreshed every
++     * poll by wld_ad_syncStats() on the cheap, non-transactional path. */
++    if(swl_timespec_isZero(&pAD->lastSampleTime)
+        || (pAD->latestStateChangeTime >= pAD->lastSampleSyncTime.tv_sec)) {
+         hasData = true;
+         SAH_TRACEZ_INFO(ME, "setting info of sta mac %s", pAD->Name);
+@@ -2052,6 +2060,10 @@
+     }
+ 
+     if(!hasData) {
++        /* PPW-XXXX: advance the watermark even when we skip the write-back, so
++         * the state-change clause edge-triggers. Without this the first state
++         * change would latch clause C true on every subsequent poll. */
++        pAD->lastSampleSyncTime = pAD->lastSampleTime;
+         amxd_trans_clean(&trans);
+         return SWL_RC_CONTINUE;
+     }

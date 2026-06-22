@@ -17,7 +17,8 @@ PKG_LICENSE_FILES:=LICENSE
 COMPONENT:=pwhm
 
 # +mr391: v7.27.8 + pwhm MR!391 (PPW-1675 dm stats refresh) — see patches/
-PKG_RELEASE:=1+mr391
+# +gss1: + 0901 PPW-XXXX gate wld_ad_syncInfo static write-back on actual change — see patches/
+PKG_RELEASE:=1+mr391+gss1
 
 define SAHInit/Install
 	install -d $(1)/etc/rc.d/
