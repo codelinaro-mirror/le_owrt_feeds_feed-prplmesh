@@ -19,7 +19,8 @@ COMPONENT:=pwhm
 # +mr391: v7.27.8 + pwhm MR!391 (PPW-1675 dm stats refresh) — see patches/
 # +gss1: + 0901 PPW-XXXX gate wld_ad_syncInfo static write-back on actual change — see patches/
 # +gss2: + 0902 PPW-XXXX add lean getStationStatsBrief() RPC, drops per-poll DM read-back — see patches/
-PKG_RELEASE:=1+mr391+gss2
+# +gss5: + 0903 PPW-XXXX drop max-capacity zeroing + right-size copy in driver station pull (Fix #5) — see patches/
+PKG_RELEASE:=1+mr391+gss5
 
 define SAHInit/Install
 	install -d $(1)/etc/rc.d/

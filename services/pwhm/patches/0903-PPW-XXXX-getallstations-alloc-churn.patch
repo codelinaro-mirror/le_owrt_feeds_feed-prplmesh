@@ -1,0 +1,119 @@
+pwhm: drop the max-capacity zeroing + right-size copy in the driver station pull
+
+Every wld station-stats poll (getStationStats() and the lean
+getStationStatsBrief() added in patch 0902 both go through this) ends in a
+driver sample pull: wld_ap_nl80211_getAllStationsInfo() ->
+wld_nl80211_getAllStationsInfo() -> NL80211_CMD_GET_STATION netlink dump. That
+bulk pull does two avoidable things per call:
+
+  1. It calloc-ZEROES a max-capacity receive buffer of
+     MAXNROF_STAENTRY (= wld_getMaxNrSta()+1, bumped to the configured max --
+     114+ in the scaling test) wld_nl80211_stationInfo_t structs. That struct is
+     large (it carries linksInfo[WLD_NL80211_MAX_MLO_LINKS=4] and per-chain
+     rssiDbmByChain[MAX_NR_ANTENNA] / rssiAvgDbmByChain[MAX_NR_ANTENNA]), so this
+     is tens of KB memset to 0 every poll -- of which only the live nrStation
+     slots are ever written or read.
+
+  2. It then calloc's a SECOND, nrStation-sized buffer and memcpy's the live
+     slots into it before freeing the receive buffer, purely to "right-size" the
+     result -- a full second per-station copy on every poll.
+
+Both are pure overhead and removable with ZERO observable behaviour change.
+
+Fix (one function, wld_nl80211_getAllStationsInfo()):
+  - calloc -> malloc for the receive buffer: the dump never reads the unused
+    tail, so zeroing it is wasted (proof below).
+  - Drop the right-size copy: transfer ownership of the receive buffer directly
+    to the caller (*ppStationInfo = receive buffer; *pnStation = nrStation). The
+    function now does ONE allocation, NO zeroing and NO second memcpy. The
+    returned buffer is MAXNROF_STAENTRY-capacity but the caller only ever reads
+    [0, nrStation) and frees the whole thing, so its capacity is invisible.
+  - The two edge paths are preserved exactly: nrStation == 0 keeps
+    rc = SWL_RC_OK, leaves *ppStationInfo untouched and frees the unused buffer;
+    a count-only / NULL-out-param caller also frees the buffer (no leak).
+
+Zero-behaviour-change proof -- every slot a caller can read is fully written:
+  - s_getStationInfoCb() memsets a stack stationInfo to 0, parses into it, then
+    memcpy's the WHOLE struct into pStationInfo[nrStation] and increments. So
+    slots [0, nrStation) are each a complete, fully-initialised struct --
+    identical to what calloc would have produced then overwritten.
+  - Slots [nrStation, MAXNROF_STAENTRY) are never written and never read: each
+    consumer bounds its loop by nrStation and the count is returned out-of-band;
+    nothing infers length from the allocation or scans for a sentinel.
+  - malloc returning NULL behaves exactly as calloc returning NULL did today: the
+    callback guards pStationInfo == NULL, so nrStation stays 0 and the function
+    returns SWL_RC_OK with no data via the nrStation == 0 path (free(NULL) is a
+    no-op). And nrStation > 0 now implies the malloc succeeded, so the ownership
+    transfer is always a valid non-NULL pointer -- which is also why the old
+    "second calloc failed -> SWL_RC_ERROR" path simply ceases to exist (there is
+    no second allocation to fail; the data is already in hand).
+
+Caller audit (the assumption was "one caller"; grep finds TWO -- both verified
+safe, neither reads past nrStation, both free the buffer regardless of size):
+  - src/nl80211/wld_ap_nl80211.c:144 (wld_ap_nl80211_getAllStationsInfo) loops
+    bounded by nrStation, copies the matching subset, then W_SWL_FREE()s the
+    returned buffer.
+  - src/nl80211/wld_ep_nl80211.c:134 (wld_ep_nl80211_findStationInfo, pMac==NULL
+    branch) loops bounded by nrStation, memcpy's one matching struct, then
+    W_SWL_FREE()s the returned buffer.
+
+This does NOT touch the per-station parse/fill work, the single-station path
+(wld_nl80211_getStationInfo, its calloc(1) is negligible), the filter-copy in
+wld_ap_nl80211_getAllStationsInfo, or the multiple independent dumps from the
+other call sites -- those are separate, behaviour-affecting changes left for
+later. It is the small, provably-safe win that benefits both the full
+getStationStats() and the lean getStationStatsBrief() reply paths.
+
+Upstream-Status: Pending
+
+--- a/src/nl80211/wld_nl80211_api.c
++++ b/src/nl80211/wld_nl80211_api.c
+@@ -660,7 +660,13 @@
+     struct getStationData_s requestData = {
+         .nrStationMax = MAXNROF_STAENTRY,
+         .nrStation = 0,
+-        .pStationInfo = calloc(MAXNROF_STAENTRY, sizeof(wld_nl80211_stationInfo_t)),
++        /* PPW-XXXX: malloc, not calloc. The dump callback (s_getStationInfoCb)
++         * fully writes every slot it hands back -- it memsets a stack stationInfo
++         * to 0, parses into it, then memcpy's the whole struct into
++         * pStationInfo[nrStation] -- so the [0, nrStation) slots are complete and
++         * the [nrStation, MAXNROF_STAENTRY) tail is never read by any consumer.
++         * Zeroing MAXNROF_STAENTRY of these large structs up front is pure waste. */
++        .pStationInfo = malloc(MAXNROF_STAENTRY * sizeof(wld_nl80211_stationInfo_t)),
+     };
+
+     swl_rc_ne rc = wld_nl80211_sendCmdSync(state, NL80211_CMD_GET_STATION, NLM_F_DUMP, ifIndex, NULL, s_getStationInfoCb, &requestData);
+@@ -668,17 +674,24 @@
+     if(requestData.nrStation == 0) {
+         SAH_TRACEZ_NOTICE(ME, "no Station device with ifIndex(%d)", ifIndex);
+         rc = SWL_RC_OK;
++        free(requestData.pStationInfo);
+     } else if((ppStationInfo != NULL) && (pnStation != NULL)) {
+-        *ppStationInfo = calloc(requestData.nrStation, sizeof(wld_nl80211_stationInfo_t));
+-        if(*ppStationInfo == NULL) {
+-            SAH_TRACEZ_ERROR(ME, "Fail to allocate memory for station info results");
+-            rc = SWL_RC_ERROR;
+-        } else {
+-            *pnStation = requestData.nrStation;
+-            memcpy(*ppStationInfo, requestData.pStationInfo, requestData.nrStation * sizeof(wld_nl80211_stationInfo_t));
+-        }
++        /* PPW-XXXX: hand the receive buffer straight to the caller instead of
++         * allocating a second nrStation-sized buffer and memcpy'ing the live
++         * slots into it. nrStation > 0 implies the malloc above succeeded (the
++         * callback only counts a station when pStationInfo != NULL), so this is
++         * always a valid, non-NULL transfer. The caller reads only [0, nrStation)
++         * -- the count is returned out-of-band via *pnStation -- and frees the
++         * whole buffer regardless of its capacity, so returning the
++         * MAXNROF_STAENTRY-capacity buffer is invisible and saves one alloc plus
++         * one full-buffer copy per driver pull. */
++        *ppStationInfo = requestData.pStationInfo;
++        *pnStation = requestData.nrStation;
++    } else {
++        /* PPW-XXXX: caller wanted only the count (or nothing); the data the dump
++         * collected is unused, so free the receive buffer rather than leak it. */
++        free(requestData.pStationInfo);
+     }
+-    free(requestData.pStationInfo);
+     return rc;
+ }
+
