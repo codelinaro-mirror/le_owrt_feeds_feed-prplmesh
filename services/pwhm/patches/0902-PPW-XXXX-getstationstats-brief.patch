@@ -1,0 +1,264 @@
+pwhm: add lean getStationStatsBrief() RPC for the per-poll monitor stats path
+
+wld publishes every associated station under
+WiFi.AccessPoint.{i}.AssociatedDevice.{i}. and exposes getStationStats(), which
+the prplMesh monitor polls ~1/s per radio. After patch 0901 removed the static
+datamodel write-back from that path, the dominant remaining cost is the reply
+builder itself: s_addStaStatsValues() re-marshals the entire AssociatedDevice
+datamodel object -- about 70 parameters, including all the static identity and
+capability strings -- plus the whole AffiliatedSta sub-list, back out of the
+datamodel via swla_dm_getObjectParams() for every station on every poll. At 114
+associated stations that read-back is ~13.7% of wld CPU, and the consumer reads
+almost none of it.
+
+The sole consumer of this RPC is the prplMesh monitor (mon_wlan_hal_whm
+read_station_stats), which parses only 14 volatile fields per station and reads
+nothing from AffiliatedSta or the static block. Every other datamodel consumer
+reads the AssociatedDevice.{i}.* objects directly, not this RPC return value.
+
+Add a dedicated getStationStatsBrief() RPC alongside the unchanged
+getStationStats(). It keeps all datamodel writes -- it still pulls from the
+driver and still calls wld_vap_sync_assoclist() (object create/remove,
+wld_ad_syncStats() volatile refresh and the 0901-gated wld_ad_syncInfo()), so
+datamodel freshness and lifecycle for TR-181 consumers are identical -- but
+builds the RPC reply directly from the live T_AssociatedDevice, emitting only
+the 14 fields the monitor consumes. No swla_dm_getObjectParams(), no
+AffiliatedSta, no ObjectIndex.
+
+The shared driver-pull/sync prologue is factored into s_addStaStatsPrologue()
+called by both reply builders so they cannot drift. The 14-field value
+expressions, types and the alias quirks (TxErrors from TxFailures, RxErrors from
+RxFailures emitted as uint64) are copied verbatim from s_setAssocDevStatsParams()
+-- the comment in s_addStaStatsValuesBrief() points back at it so the duplicated
+mapping is kept in sync. Because the prologue still runs wld_ad_syncStats(),
+pAD == datamodel at reply time, so the lean reply carries the same values a full
+read-back would.
+
+The 14-key set (MACAddress, TxBytes, RxBytes, TxErrors, RxErrors, TxPacketCount,
+RxPacketCount, TxUnicastPacketCount, Tx_Retransmissions, LastDataDownlinkRate,
+LastDataUplinkRate, DownlinkBandwidth, SignalNoiseRatio, SignalStrength) is a
+tight cross-repo contract with the prplMesh monitor. Adding a 15th field is a
+conscious two-repo change (pwhm emitter + monitor read_station_stats); the
+paired prplMesh patch flips the monitor call site to getStationStatsBrief().
+
+getStationStats() and its full reply are left byte-for-byte unchanged, so any
+other (rare) caller is unaffected.
+
+Upstream-Status: Pending
+
+diff --git a/src/wld_assocdev.c b/src/wld_assocdev.c
+--- a/src/wld_assocdev.c
++++ b/src/wld_assocdev.c
+@@ -888,7 +888,14 @@
+  * or in callback handler.
+  * It will update staStats values in data model, and return the new values in retval.
+  */
+-static void s_addStaStatsValues(T_AccessPoint* pAP, swl_rc_ne ret, amxc_var_t* retval) {
++/* PPW-XXXX: shared prologue for the getStationStats / getStationStatsBrief
++ * reply builders. Refreshes the per-station stats history and link stats, then
++ * syncs the VAP associated-device list into the datamodel (object create/remove
++ * + volatile wld_ad_syncStats() + the Fix#1-gated static wld_ad_syncInfo()), and
++ * finally resets retval to an empty list ready for the per-station entries. The
++ * datamodel freshness/lifecycle is identical for both emitters; only the
++ * per-station reply marshalling that follows differs. */
++static void s_addStaStatsPrologue(T_AccessPoint* pAP, swl_rc_ne ret, amxc_var_t* retval) {
+     if(!wld_ap_hasStackEnabled(pAP) || !swl_rc_isOk(ret)) {
+         //remove all stations if AP or Radio is disabled or station stats returns error
+         wld_vap_remove_all(pAP);
+@@ -903,6 +910,10 @@
+     wld_vap_sync_assoclist(pAP);
+ 
+     amxc_var_set_type(retval, AMXC_VAR_ID_LIST);
++}
++
++static void s_addStaStatsValues(T_AccessPoint* pAP, swl_rc_ne ret, amxc_var_t* retval) {
++    s_addStaStatsPrologue(pAP, ret, retval);
+ 
+     for(int i = 0; i < pAP->AssociatedDeviceNumberOfEntries; i++) {
+         T_AssociatedDevice* pAD = pAP->AssociatedDevice[i];
+@@ -950,6 +961,62 @@
+ 
+ }
+ 
++/**
++ * PPW-XXXX: lean reply builder for the getStationStatsBrief() RPC.
++ *
++ * Unlike s_addStaStatsValues(), which re-marshals the whole AssociatedDevice
++ * datamodel object (plus its AffiliatedSta sub-list) back out via
++ * swla_dm_getObjectParams() for every station on every poll, this emits only
++ * the small fixed set of volatile fields that the sole consumer -- the prplMesh
++ * monitor (mon_wlan_hal_whm.cpp read_station_stats) -- actually parses, built
++ * directly from the live T_AssociatedDevice. The shared prologue still runs
++ * wld_vap_sync_assoclist() (hence wld_ad_syncStats()), so pAD == DM at reply
++ * time and these values match what a full readback would return.
++ *
++ * The value expressions, types and the alias quirks (TxErrors<-TxFailures,
++ * RxErrors<-RxFailures emitted as uint64) are copied VERBATIM from
++ * s_setAssocDevStatsParams() -- keep the two in sync. This 14-key set is a tight
++ * cross-repo contract with the prplMesh monitor: adding a field is a conscious
++ * two-repo change (see the prplmesh 0002 patch header).
++ */
++static void s_addStaStatsValuesBrief(T_AccessPoint* pAP, swl_rc_ne ret, amxc_var_t* retval) {
++    s_addStaStatsPrologue(pAP, ret, retval);
++
++    for(int i = 0; i < pAP->AssociatedDeviceNumberOfEntries; i++) {
++        T_AssociatedDevice* pAD = pAP->AssociatedDevice[i];
++        if((pAD == NULL) || (pAD->object == NULL)) {
++            SAH_TRACEZ_ERROR(ME, "%s: invalid sta %u", pAP->alias, i);
++            continue;
++        }
++
++        amxc_var_t tmpVar;
++        amxc_var_init(&tmpVar);
++        amxc_var_set_type(&tmpVar, AMXC_VAR_ID_HTABLE);
++
++        swl_macChar_t mac;
++        swl_mac_binToChar(&mac, (swl_macBin_t*) pAD->MACAddress);
++        amxc_var_add_new_key_cstring_t(&tmpVar, "MACAddress", mac.cMac);
++
++        amxc_var_add_new_key_uint64_t(&tmpVar, "TxBytes", pAD->TxBytes);
++        amxc_var_add_new_key_uint64_t(&tmpVar, "RxBytes", pAD->RxBytes);
++        amxc_var_add_new_key_uint32_t(&tmpVar, "TxErrors", pAD->TxFailures);
++        amxc_var_add_new_key_uint64_t(&tmpVar, "RxErrors", pAD->RxFailures);
++        amxc_var_add_new_key_uint32_t(&tmpVar, "TxPacketCount", pAD->TxPacketCount);
++        amxc_var_add_new_key_uint32_t(&tmpVar, "RxPacketCount", pAD->RxPacketCount);
++        amxc_var_add_new_key_uint32_t(&tmpVar, "TxUnicastPacketCount", pAD->TxUnicastPacketCount);
++        amxc_var_add_new_key_uint32_t(&tmpVar, "Tx_Retransmissions", pAD->Tx_Retransmissions);
++        amxc_var_add_new_key_uint32_t(&tmpVar, "LastDataDownlinkRate", pAD->LastDataDownlinkRate);
++        amxc_var_add_new_key_uint32_t(&tmpVar, "LastDataUplinkRate", pAD->LastDataUplinkRate);
++        amxc_var_add_new_key_uint32_t(&tmpVar, "DownlinkBandwidth", pAD->DownlinkBandwidth);
++        amxc_var_add_new_key_int32_t(&tmpVar, "SignalNoiseRatio", pAD->SignalNoiseRatio);
++        amxc_var_add_new_key_int32_t(&tmpVar, "SignalStrength", pAD->SignalStrength);
++
++        amxc_var_add_new_amxc_htable_t(retval, &tmpVar.data.vm);
++
++        amxc_var_clean(&tmpVar);
++    }
++}
++
+ static void s_staStatsDoneHandler(T_AccessPoint* pAP, bool success) {
+     ASSERT_NOT_NULL(pAP, , ME, "NULL");
+     ASSERT_NOT_EQUALS(pAP->stationsStatsState.call_id, 0, , ME, "%s no fcall", pAP->alias);
+@@ -958,7 +1025,15 @@
+     amxc_var_t values;
+     amxc_var_init(&values);
+ 
+-    s_addStaStatsValues(pAP, success, &values);
++    /* PPW-XXXX: build the same reply variant the synchronous tail would, picking
++     * the lean builder when this deferred call originated from
++     * getStationStatsBrief(). The per-AP running guard serialises the two RPCs,
++     * so the selector cannot flip between defer and completion. */
++    if(pAP->stationsStatsBriefReply) {
++        s_addStaStatsValuesBrief(pAP, success, &values);
++    } else {
++        s_addStaStatsValues(pAP, success, &values);
++    }
+ 
+     amxd_function_deferred_done(pAP->stationsStatsState.call_id,
+                                 success ? amxd_status_ok : amxd_status_unknown_error,
+@@ -1019,6 +1094,10 @@
+         return amxd_status_unknown_error;
+     }
+ 
++    /* PPW-XXXX: full reply on this path; clear the selector that the (possibly
++     * deferred) completion handler s_staStatsDoneHandler() reads. */
++    pAP->stationsStatsBriefReply = false;
++
+     swl_rc_ne ret = pAP->pFA->mfn_wvap_get_station_stats(pAP);
+     SAH_TRACEZ_INFO(ME, "%s: sta stats %i", pAP->alias, ret);
+     if(ret == SWL_RC_CONTINUE) {
+@@ -1038,6 +1117,62 @@
+ 
+     SAH_TRACEZ_OUT(ME);
+     return amxd_status_ok;
++}
++
++/**
++ * PPW-XXXX: getStationStatsBrief() RPC handler.
++ *
++ * Identical control flow to _getStationStats() above (synchronous + deferred
++ * driver-pull paths), but flags the call so the reply is built by the lean
++ * s_addStaStatsValuesBrief() instead of the full s_addStaStatsValues(). The
++ * datamodel is still fully synced (the shared prologue runs
++ * wld_vap_sync_assoclist()), so TR-181 AssociatedDevice.* consumers are
++ * unaffected; only the RPC reply payload is trimmed to the monitor's contract.
++ */
++amxd_status_t _getStationStatsBrief(amxd_object_t* obj_AP,
++                                    amxd_function_t* func _UNUSED,
++                                    amxc_var_t* args _UNUSED,
++                                    amxc_var_t* retval) {
++
++    SAH_TRACEZ_IN(ME);
++    /* Check our input data */
++    T_AccessPoint* pAP = obj_AP->priv;
++
++    if(!debugIsVapPointer(pAP)) {
++        SAH_TRACEZ_OUT(ME);
++        return amxd_status_unknown_error;
++    }
++
++    SAH_TRACEZ_INFO(ME, "pAP = %p", pAP);
++
++    if(pAP->stationsStatsState.running) {
++        SAH_TRACEZ_ERROR(ME, "%s: getStationStats is already running", pAP->alias);
++        SAH_TRACEZ_OUT(ME);
++        return amxd_status_unknown_error;
++    }
++
++    /* PPW-XXXX: lean reply on this path; the completion handler reads it. */
++    pAP->stationsStatsBriefReply = true;
++
++    swl_rc_ne ret = pAP->pFA->mfn_wvap_get_station_stats(pAP);
++    SAH_TRACEZ_INFO(ME, "%s: sta stats %i", pAP->alias, ret);
++    if(ret == SWL_RC_CONTINUE) {
++        pAP->stationsStatsState.running = true;
++        amxp_timer_t* timer = NULL;
++        amxp_timer_new(&timer, s_staStatsTimeout, pAP);
++        amxp_timer_start(timer, STATIONS_STATS_TIMEOUT);
++
++        pAP->stationsStatsState.timer = timer;
++
++        amxd_function_defer(func, &pAP->stationsStatsState.call_id, retval, s_staStatsCancel, pAP);
++        SAH_TRACEZ_OUT(ME);
++        return amxd_status_deferred;
++    }
++
++    s_addStaStatsValuesBrief(pAP, ret, retval);
++
++    SAH_TRACEZ_OUT(ME);
++    return amxd_status_ok;
+ }
+ 
+ static swl_rc_ne s_getSingleStationStats(amxd_object_t* const object) {
+diff --git a/include/wld/wld.h b/include/wld/wld.h
+--- a/include/wld/wld.h
++++ b/include/wld/wld.h
+@@ -1980,6 +1980,7 @@
+     bool enableVendorIEs;                 /* Enable the broadcast of custom vendor IEs */
+     amxc_llist_t vendorIEs;               /* List of vendor IE */
+     wld_fcallState_t stationsStatsState;  /* Station stats state */
++    bool stationsStatsBriefReply;         /* PPW-XXXX: select lean getStationStatsBrief() reply builder in s_staStatsDoneHandler() */
+     wld_vapConfigDriver_t driverCfg;      /* Detailed driver config options */
+ 
+     /* Table of recent station disconnections.
+diff --git a/odl/wld_accesspoint.odl b/odl/wld_accesspoint.odl
+--- a/odl/wld_accesspoint.odl
++++ b/odl/wld_accesspoint.odl
+@@ -1198,6 +1198,17 @@
+ 		*/
+ 		list getStationStats();
+ 
++		/** PPW-XXXX: lean variant of getStationStats().
++		 * Updates the AssociatedDevice[] datamodel exactly like getStationStats()
++		 * (object lifecycle and stats are unchanged), but the returned reply
++		 * carries only the small fixed set of volatile fields the prplMesh monitor
++		 * consumes, built straight from the live station state instead of an
++		 * expensive per-station datamodel read-back. Sole consumer: prplMesh
++		 * mon_wlan_hal_whm read_station_stats (14-key cross-repo contract).
++		 * @return list of variant maps with the brief AssociatedDevice values
++		*/
++		list getStationStatsBrief();
++
+ 		/** Retrieve number of far associated devices
+ 		 *  Return the number of associated devices which have been measured
+ 		 *  below the provided RSSI threshold (in dBm)
