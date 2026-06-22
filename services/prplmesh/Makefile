@@ -1,7 +1,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=prplmesh
-PKG_RELEASE:=1
+# +gss2: + 0002 PPM-XXXX monitor polls lean getStationStatsBrief() RPC — see patches/
+PKG_RELEASE:=2
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_VERSION:=60f778ad983ce1b43c43880b77865da9ca98c50d

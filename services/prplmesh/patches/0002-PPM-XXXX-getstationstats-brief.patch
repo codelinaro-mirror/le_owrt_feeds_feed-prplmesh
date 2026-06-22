@@ -1,0 +1,44 @@
+prplmesh: monitor: poll the lean getStationStatsBrief() station stats RPC
+
+The WHM monitor refreshes its per-VAP station-stats cache by calling the pwhm
+getStationStats() RPC ~1/s per radio. That RPC rebuilds its reply by reading the
+entire AssociatedDevice datamodel object back out for every station (~70 params
+plus the AffiliatedSta sub-list), which is the dominant wld CPU cost at scale --
+yet read_station_stats() here parses only 14 volatile fields and reads nothing
+from the static block or AffiliatedSta.
+
+pwhm patch 0902 adds a dedicated getStationStatsBrief() RPC that updates the
+datamodel exactly like getStationStats() but returns only those 14 fields, built
+directly from the live station state (no per-station datamodel read-back). Switch
+the monitor's poll to it.
+
+read_station_stats() is unchanged: getStationStatsBrief() emits the identical
+keys (MACAddress, TxBytes, RxBytes, TxErrors, RxErrors, TxPacketCount,
+RxPacketCount, TxUnicastPacketCount, Tx_Retransmissions, LastDataDownlinkRate,
+LastDataUplinkRate, DownlinkBandwidth, SignalNoiseRatio, SignalStrength) with the
+same types. This 14-key set is a tight cross-repo contract with pwhm: if a new
+field is ever needed here it must be added to the pwhm emitter at the same time.
+
+Upstream-Status: Pending
+
+diff --git a/common/beerocks/bwl/whm/mon_wlan_hal_whm.cpp b/common/beerocks/bwl/whm/mon_wlan_hal_whm.cpp
+--- a/common/beerocks/bwl/whm/mon_wlan_hal_whm.cpp
++++ b/common/beerocks/bwl/whm/mon_wlan_hal_whm.cpp
+@@ -517,7 +517,16 @@
+ 
+     AmbiorixVariant result;
+     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+-    if (!m_ambiorix_cl.call(vap_path, "getStationStats", args, result)) {
++    // PPM-XXXX: poll the lean getStationStatsBrief() RPC (pwhm patch 0902)
++    // instead of getStationStats(). It returns only the 14 volatile fields
++    // read_station_stats() below parses (MACAddress + tx/rx bytes, errors,
++    // packet counts, retransmissions, last data rates, downlink bandwidth, SNR,
++    // signal strength), built directly from the live station state -- avoiding
++    // the expensive per-station datamodel read-back the full getStationStats()
++    // does on every ~1 Hz/radio poll. This 14-key set is a cross-repo contract
++    // with pwhm: needing a new field is a conscious two-repo change.
++    // read_station_stats() is unchanged (identical keys).
++    if (!m_ambiorix_cl.call(vap_path, "getStationStatsBrief", args, result)) {
+         m_station_stats_cache.erase(vap_iface_name);
+         return false;
+     }
