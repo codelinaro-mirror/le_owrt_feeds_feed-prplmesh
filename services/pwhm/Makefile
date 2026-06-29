@@ -3,11 +3,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pwhm
-PKG_VERSION:=dev_PPW-1675_full
+PKG_VERSION:=v7.27.10
 SHORT_DESCRIPTION:=prplMesh WHM
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=dev_PPW-1675_full
+PKG_SOURCE_VERSION:=45d986f254d12e49e85df802fc04a414256ed9b8
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/prplmesh/pwhm/plugins/pwhm.git
 PKG_MIRROR_HASH:=skip
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -17,7 +17,7 @@ PKG_LICENSE_FILES:=LICENSE
 
 COMPONENT:=pwhm
 
-PKG_RELEASE:=1
+PKG_RELEASE:=1+ppw1675+g45d986f2
 
 define SAHInit/Install
 	install -d $(1)/etc/rc.d/
